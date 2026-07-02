@@ -18,4 +18,9 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\NoKill.Core\NoKill.Core.csproj" />
+    <ProjectReference Include="..\..\src\NoKill.Vault\NoKill.Vault.csproj" />
+  </ItemGroup>
+
 </Project>

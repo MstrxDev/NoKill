@@ -3,6 +3,8 @@ using CommunityToolkit.Mvvm.Input;
 using NoKill.Automation;
 using NoKill.Core.Models;
 using NoKill.Diagnostics;
+using NoKill.Vault;
+using NoKill.Win32;
 
 namespace NoKill.App;
 
@@ -10,6 +12,7 @@ public sealed partial class MainViewModel : ObservableObject
 {
     private readonly WindowInventoryService _inventory = new();
     private readonly HiddenDialogDetector _detector = new();
+    private readonly RecoveryVault _vault = new();
 
     [ObservableProperty]
     private IReadOnlyList<AppWindowInfo> _windows = [];
@@ -57,6 +60,32 @@ public sealed partial class MainViewModel : ObservableObject
         {
             IsRefreshing = false;
         }
+    }
+
+    [RelayCommand]
+    private async Task PreserveAsync(AppWindowInfo target)
+    {
+        StatusText = $"Preserving evidence for {target.ProcessName}…";
+
+        var result = await Task.Run(() =>
+        {
+            var processWindows = Windows.Where(w => w.ProcessId == target.ProcessId).ToList();
+            var blockers = Blockers.Where(f => f.ProcessId == target.ProcessId).ToList();
+
+            return _vault.Preserve(new VaultEntryRequest
+            {
+                TargetWindow = target,
+                ProcessInfo = ProcessInspector.TryInspect(target.ProcessId),
+                ProcessWindows = processWindows,
+                Blockers = blockers,
+                ScreenshotPng = WindowCapture.TryCapturePng(target.WindowHandle),
+                Reason = "manual preserve from dashboard",
+            });
+        });
+
+        StatusText = result.Warnings.Count == 0
+            ? $"Preserved {result.SavedFiles.Count} file(s) → {result.EntryDirectory}"
+            : $"Preserved with {result.Warnings.Count} warning(s) → {result.EntryDirectory}";
     }
 
     [RelayCommand]
