@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/NoKill.Core/NoKill.Core.csproj" />
+    <Project Path="src/NoKill.Profiles/NoKill.Profiles.csproj" />
+    <Project Path="src/NoKill.Vault/NoKill.Vault.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/NoKill.Core.Tests/NoKill.Core.Tests.csproj" />
+    <Project Path="tests/NoKill.Diagnostics.Tests/NoKill.Diagnostics.Tests.csproj" />
+    <Project Path="tests/NoKill.Vault.Tests/NoKill.Vault.Tests.csproj" />
+  </Folder>
+</Solution>
