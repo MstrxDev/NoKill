@@ -1,0 +1,23 @@
+<Window x:Class="HungDemoApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="HungDemoApp — NoKill lab rat"
+        Width="420" Height="320"
+        WindowStartupLocation="CenterScreen">
+    <StackPanel Margin="16">
+        <TextBlock TextWrapping="Wrap" Margin="0,0,0,12">
+            Deliberately misbehaving test app. Each button reproduces one
+            freeze scenario for NoKill to detect. Nothing here is a bug.
+        </TextBlock>
+
+        <Button Content="Freeze UI thread (30 s)" Margin="0,4" Padding="8"
+                Click="FreezeThirtySeconds_Click"/>
+        <Button Content="Deadlock two threads (permanent)" Margin="0,4" Padding="8"
+                Click="Deadlock_Click"/>
+        <Button Content="Open modal dialog behind this window" Margin="0,4" Padding="8"
+                Click="HiddenModal_Click"/>
+
+        <TextBlock x:Name="StatusText" Margin="0,12,0,0" FontWeight="Bold"
+                   Text="Status: idle"/>
+    </StackPanel>
+</Window>

@@ -1,8 +1,15 @@
 <Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/HungDemoApp/HungDemoApp.csproj" />
+  </Folder>
   <Folder Name="/src/">
+    <Project Path="src/NoKill.App/NoKill.App.csproj" />
+    <Project Path="src/NoKill.Cli/NoKill.Cli.csproj" />
     <Project Path="src/NoKill.Core/NoKill.Core.csproj" />
+    <Project Path="src/NoKill.Diagnostics/NoKill.Diagnostics.csproj" />
     <Project Path="src/NoKill.Profiles/NoKill.Profiles.csproj" />
     <Project Path="src/NoKill.Vault/NoKill.Vault.csproj" />
+    <Project Path="src/NoKill.Win32/NoKill.Win32.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/NoKill.Core.Tests/NoKill.Core.Tests.csproj" />

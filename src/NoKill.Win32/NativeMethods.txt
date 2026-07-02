@@ -1,0 +1,10 @@
+EnumWindows
+GetWindowText
+GetWindowTextLength
+IsWindowVisible
+GetWindowThreadProcessId
+IsHungAppWindow
+SendMessageTimeout
+GetShellWindow
+DwmGetWindowAttribute
+WM_NULL

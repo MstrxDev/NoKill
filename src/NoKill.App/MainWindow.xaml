@@ -1,0 +1,50 @@
+<Window x:Class="NoKill.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:NoKill.App"
+        Title="NoKill — Rescue Dashboard" Height="560" Width="900"
+        d:DataContext="{d:DesignInstance Type=local:MainViewModel}"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d">
+    <DockPanel Margin="8">
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+            <Button DockPanel.Dock="Right" Content="Refresh" Padding="16,4"
+                    Command="{Binding RefreshCommand}"/>
+            <TextBlock Text="Open windows (read-only scan, refreshed every 3 s)"
+                       VerticalAlignment="Center" FontWeight="Bold"/>
+        </DockPanel>
+
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBarItem Content="{Binding StatusText}"/>
+        </StatusBar>
+
+        <DataGrid ItemsSource="{Binding Windows}"
+                  AutoGenerateColumns="False" IsReadOnly="True"
+                  HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                  SelectionMode="Single">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="130"/>
+                <DataGridTextColumn Header="Process" Binding="{Binding ProcessName}" Width="170"/>
+                <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="70"/>
+                <DataGridTextColumn Header="Window title" Binding="{Binding Title}" Width="*"/>
+            </DataGrid.Columns>
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Status}" Value="NotResponding">
+                            <Setter Property="Background" Value="#FFD6D6"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Status}" Value="LikelyHung">
+                            <Setter Property="Background" Value="#FFEFD6"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Status}" Value="Unknown">
+                            <Setter Property="Foreground" Value="Gray"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.RowStyle>
+        </DataGrid>
+    </DockPanel>
+</Window>
