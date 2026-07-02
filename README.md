@@ -20,7 +20,11 @@ Task Manager is a hammer. NoKill detects hung apps, figures out *why* they're st
 - `NoKill.App` — WPF dashboard: live window list with hang status + per-row Preserve button, suspected-blockers panel with per-row Reveal button, auto-refresh every 3 s.
 - `NoKill.Cli` — same scan as a console table (`--flagged-only`, `--reveal`, `--preserve <pid>`).
 - `samples/HungDemoApp` — deliberately misbehaving lab rat: freeze-on-click, deadlock, hidden modal dialog; `--auto-freeze <delayMs> <durationMs>` and `--auto-hidden-modal` for automated tests.
-- `NoKill.Core` / `NoKill.Vault` / `NoKill.Profiles` — models today; vault and app-specific rescue profiles are the next milestones.
+- `NoKill.Profiles` — rescue profiles as pure data, covering **any** process, not just known apps:
+  - a **universal heuristic profile** applies to every process (crash dumps, `%APPDATA%`/`%LOCALAPPDATA%` folders matching the process name, `%TEMP%` files, logs beside the executable, autosave/backup filename patterns) with conservative age/count caps;
+  - **built-in profiles** for Blender, Roblox Studio, Visual Studio, VS Code, Notepad++, Office, Chrome, Discord layer precision on top;
+  - **user JSON profiles** in `Documents\NoKill\Profiles\*.json` add or override any of the above without recompiling.
+  Windowless services and background processes are first-class: preserve works by PID with no window (no screenshot, everything else intact).
 
 ## Build & test
 
@@ -36,6 +40,6 @@ dotnet run --project src/NoKill.App        # dashboard
 1. ✅ Window inventory + conservative hang detection
 2. ✅ Hidden-dialog / blocker detection + Reveal (UI Automation)
 3. ✅ Recovery Vault (reports, screenshot, process info; artifact engine ready for profiles)
-4. App-specific rescue profiles (supply autosave/log/temp artifact sources to the vault)
+4. ✅ Rescue profiles: universal heuristics + built-ins + user JSON, windowless preserve
 5. Wait Chain Traversal diagnostics
 6. Research branch: process snapshots, cooperative recovery SDK

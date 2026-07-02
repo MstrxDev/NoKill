@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using NoKill.Automation;
 using NoKill.Core.Models;
 using NoKill.Diagnostics;
+using NoKill.Profiles;
 using NoKill.Vault;
 using NoKill.Win32;
 
@@ -13,6 +14,7 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly WindowInventoryService _inventory = new();
     private readonly HiddenDialogDetector _detector = new();
     private readonly RecoveryVault _vault = new();
+    private readonly ArtifactPlanner _planner = new();
 
     [ObservableProperty]
     private IReadOnlyList<AppWindowInfo> _windows = [];
@@ -71,6 +73,7 @@ public sealed partial class MainViewModel : ObservableObject
         {
             var processWindows = Windows.Where(w => w.ProcessId == target.ProcessId).ToList();
             var blockers = Blockers.Where(f => f.ProcessId == target.ProcessId).ToList();
+            var plan = _planner.PlanFor(target.ProcessName, target.ExecutablePath);
 
             return _vault.Preserve(new VaultEntryRequest
             {
@@ -79,6 +82,8 @@ public sealed partial class MainViewModel : ObservableObject
                 ProcessWindows = processWindows,
                 Blockers = blockers,
                 ScreenshotPng = WindowCapture.TryCapturePng(target.WindowHandle),
+                Artifacts = plan.Artifacts,
+                AppliedProfiles = plan.AppliedProfiles,
                 Reason = "manual preserve from dashboard",
             });
         });

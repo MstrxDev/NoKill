@@ -149,6 +149,29 @@ public sealed class RecoveryVaultTests : IDisposable
     }
 
     [Fact]
+    public void WindowlessProcess_CanStillBePreserved()
+    {
+        var vault = new RecoveryVault(_vaultRoot);
+
+        var result = vault.Preserve(new VaultEntryRequest
+        {
+            // no TargetWindow: a service or background process
+            ProcessInfo = new ProcessInfoSnapshot
+            {
+                ProcessId = 999,
+                ProcessName = "someservice",
+                CapturedAt = DateTimeOffset.Now,
+            },
+            AppliedProfiles = ["Universal heuristics"],
+        });
+
+        Assert.Contains("someservice_999", result.EntryDirectory);
+        string txt = File.ReadAllText(Path.Combine(result.EntryDirectory, "rescue-report.txt"));
+        Assert.Contains("windowless process/service", txt);
+        Assert.Contains("Universal heuristics", txt);
+    }
+
+    [Fact]
     public void Screenshot_IsSavedWhenProvided()
     {
         var vault = new RecoveryVault(_vaultRoot);

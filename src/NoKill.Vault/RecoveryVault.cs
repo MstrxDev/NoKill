@@ -73,9 +73,11 @@ public sealed class RecoveryVault
 
     private string CreateEntryDirectory(VaultEntryRequest request)
     {
-        string processPart = Sanitize(request.TargetWindow.ProcessName);
-        string baseName =
-            $"{DateTime.Now:yyyy-MM-dd_HHmmss}_{processPart}_{request.TargetWindow.ProcessId}";
+        string processName =
+            request.TargetWindow?.ProcessName ?? request.ProcessInfo?.ProcessName ?? "process";
+        int pid = request.TargetWindow?.ProcessId ?? request.ProcessInfo?.ProcessId ?? 0;
+
+        string baseName = $"{DateTime.Now:yyyy-MM-dd_HHmmss}_{Sanitize(processName)}_{pid}";
 
         // Never reuse an entry folder: a second preserve in the same second
         // gets a numeric suffix instead of writing into existing evidence.
@@ -181,7 +183,6 @@ public sealed class RecoveryVault
 
     private static string BuildTextReport(VaultEntryRequest request)
     {
-        var target = request.TargetWindow;
         var sb = new StringBuilder();
 
         sb.AppendLine("NoKill Rescue Report");
@@ -189,13 +190,32 @@ public sealed class RecoveryVault
         sb.AppendLine($"Created:   {DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss zzz}");
         sb.AppendLine($"Reason:    {request.Reason}");
         sb.AppendLine();
-        sb.AppendLine($"Target:    \"{target.Title}\"");
-        sb.AppendLine($"Process:   {target.ProcessName} (pid {target.ProcessId})");
-        sb.AppendLine($"Path:      {target.ExecutablePath ?? "(inaccessible)"}");
-        sb.AppendLine($"Status:    {target.Status}");
-        sb.AppendLine(
-            $"Signals:   IsHungAppWindow={target.Signals.IsHungAppWindow}, " +
-            $"PingTimedOut={target.Signals.PingTimedOut}, ProbeFailed={target.Signals.ProbeFailed}");
+
+        if (request.TargetWindow is { } target)
+        {
+            sb.AppendLine($"Target:    \"{target.Title}\"");
+            sb.AppendLine($"Process:   {target.ProcessName} (pid {target.ProcessId})");
+            sb.AppendLine($"Path:      {target.ExecutablePath ?? "(inaccessible)"}");
+            sb.AppendLine($"Status:    {target.Status}");
+            sb.AppendLine(
+                $"Signals:   IsHungAppWindow={target.Signals.IsHungAppWindow}, " +
+                $"PingTimedOut={target.Signals.PingTimedOut}, ProbeFailed={target.Signals.ProbeFailed}");
+        }
+        else if (request.ProcessInfo is { } proc)
+        {
+            sb.AppendLine($"Target:    windowless process/service");
+            sb.AppendLine($"Process:   {proc.ProcessName} (pid {proc.ProcessId})");
+            sb.AppendLine($"Path:      {proc.ExecutablePath ?? "(inaccessible)"}");
+        }
+        else
+        {
+            sb.AppendLine("Target:    unknown (no window or process info supplied)");
+        }
+
+        if (request.AppliedProfiles.Count > 0)
+        {
+            sb.AppendLine($"Profiles:  {string.Join(", ", request.AppliedProfiles)}");
+        }
 
         if (request.ProcessInfo is { } info)
         {
@@ -238,7 +258,7 @@ public sealed class RecoveryVault
         sb.AppendLine();
         sb.AppendLine(request.Artifacts.Count > 0
             ? $"Artifacts preserved into recovered-files/ ({request.Artifacts.Count} source(s))."
-            : "No recovery artifacts requested (no app profile for this process yet).");
+            : "No recovery artifacts found by the applied profiles.");
 
         return sb.ToString();
     }

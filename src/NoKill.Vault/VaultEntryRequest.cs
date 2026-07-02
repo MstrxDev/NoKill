@@ -6,15 +6,21 @@ namespace NoKill.Vault;
 public sealed record ArtifactSource(string SourcePath, string Category);
 
 /// <summary>
-/// Everything the vault should preserve about one rescue situation. All parts
-/// except the target window are optional — the vault saves whatever evidence
-/// exists rather than refusing to act on incomplete information.
+/// Everything the vault should preserve about one rescue situation. Every
+/// part is optional — windowless services and background processes have no
+/// target window, and the vault saves whatever evidence exists rather than
+/// refusing to act on incomplete information. At least one of
+/// <see cref="TargetWindow"/> or <see cref="ProcessInfo"/> should identify
+/// the process.
 /// </summary>
 public sealed record VaultEntryRequest
 {
-    public required AppWindowInfo TargetWindow { get; init; }
+    public AppWindowInfo? TargetWindow { get; init; }
 
     public ProcessInfoSnapshot? ProcessInfo { get; init; }
+
+    /// <summary>Display names of the rescue profiles that contributed to this preserve.</summary>
+    public IReadOnlyList<string> AppliedProfiles { get; init; } = [];
 
     public IReadOnlyList<AppWindowInfo> ProcessWindows { get; init; } = [];
 

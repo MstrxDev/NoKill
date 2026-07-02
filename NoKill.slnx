@@ -15,6 +15,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/NoKill.Core.Tests/NoKill.Core.Tests.csproj" />
     <Project Path="tests/NoKill.Diagnostics.Tests/NoKill.Diagnostics.Tests.csproj" />
+    <Project Path="tests/NoKill.Profiles.Tests/NoKill.Profiles.Tests.csproj" />
     <Project Path="tests/NoKill.Vault.Tests/NoKill.Vault.Tests.csproj" />
   </Folder>
 </Solution>

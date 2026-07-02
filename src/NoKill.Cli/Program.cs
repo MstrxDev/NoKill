@@ -1,6 +1,7 @@
 using NoKill.Automation;
 using NoKill.Core.Models;
 using NoKill.Diagnostics;
+using NoKill.Profiles;
 using NoKill.Vault;
 using NoKill.Win32;
 
@@ -81,31 +82,48 @@ return 0;
 
 static int PreserveToVault(int pid)
 {
+    var processInfo = ProcessInspector.TryInspect(pid);
     var inventory = new WindowInventoryService();
     var processWindows = inventory.Snapshot().Where(w => w.ProcessId == pid).ToList();
 
-    if (processWindows.Count == 0)
+    // Windowless processes and services are first-class citizens: no window
+    // just means no screenshot and no hang status — evidence still gets vaulted.
+    var target = processWindows.OrderByDescending(w => w.Status).FirstOrDefault();
+
+    if (target is null && processInfo is null)
     {
-        Console.Error.WriteLine($"No visible windows found for pid {pid}.");
+        Console.Error.WriteLine($"No process with pid {pid} found (or access was denied).");
         return 1;
     }
 
-    // Preserve around the worst-off window of the process.
-    var target = processWindows.OrderByDescending(w => w.Status).First();
-    var blockers = new HiddenDialogDetector().Detect().Where(f => f.ProcessId == pid).ToList();
+    string processName = target?.ProcessName ?? processInfo!.ProcessName;
+    string? exePath = target?.ExecutablePath ?? processInfo?.ExecutablePath;
+
+    var blockers = target is not null
+        ? new HiddenDialogDetector().Detect().Where(f => f.ProcessId == pid).ToList()
+        : [];
+
+    var plan = new ArtifactPlanner().PlanFor(processName, exePath);
 
     var vault = new RecoveryVault();
     var result = vault.Preserve(new VaultEntryRequest
     {
         TargetWindow = target,
-        ProcessInfo = ProcessInspector.TryInspect(pid),
+        ProcessInfo = processInfo,
         ProcessWindows = processWindows,
         Blockers = blockers,
-        ScreenshotPng = WindowCapture.TryCapturePng(target.WindowHandle),
+        ScreenshotPng = target is not null ? WindowCapture.TryCapturePng(target.WindowHandle) : null,
+        Artifacts = plan.Artifacts,
+        AppliedProfiles = plan.AppliedProfiles,
         Reason = "manual preserve via CLI",
     });
 
     Console.WriteLine($"Vault entry: {result.EntryDirectory}");
+    Console.WriteLine($"Profiles applied: {string.Join(", ", plan.AppliedProfiles)}");
+    foreach (string warning in plan.Warnings)
+    {
+        Console.WriteLine($"  profile warning: {warning}");
+    }
     foreach (string file in result.SavedFiles)
     {
         Console.WriteLine($"  saved: {Path.GetRelativePath(result.EntryDirectory, file)}");
