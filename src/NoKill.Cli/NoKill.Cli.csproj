@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\NoKill.Core\NoKill.Core.csproj" />
     <ProjectReference Include="..\NoKill.Diagnostics\NoKill.Diagnostics.csproj" />
+    <ProjectReference Include="..\NoKill.Automation\NoKill.Automation.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -13,11 +13,12 @@ Task Manager is a hammer. NoKill detects hung apps, figures out *why* they're st
 
 ## Current state (v0.1 slice)
 
-- `NoKill.Win32` — read-only Win32 interop (CsWin32): window enumeration, `IsHungAppWindow`, `WM_NULL` ping via `SendMessageTimeout`.
-- `NoKill.Diagnostics` — `WindowInventoryService` (desktop snapshot) + `HangScorer` (pure, tested signal combination).
-- `NoKill.App` — WPF dashboard listing windows with live hang status, auto-refresh every 3 s.
-- `NoKill.Cli` — same scan as a console table, for scripting and testing (`--flagged-only`).
-- `samples/HungDemoApp` — deliberately misbehaving lab rat: freeze-on-click, deadlock, hidden modal dialog, and `--auto-freeze <delayMs> <durationMs>` for automated tests.
+- `NoKill.Win32` — Win32 interop (CsWin32): window enumeration (z-order, owner chain, enabled state), `IsHungAppWindow`, `WM_NULL` ping via `SendMessageTimeout`. All read-only except `WindowActions` — the single, auditable place allowed to touch another window (z-order raise only, no activation, no input).
+- `NoKill.Diagnostics` — `WindowInventoryService` (desktop snapshot), `HangScorer` and `BlockerClassifier` (pure, tested signal/window-facts logic).
+- `NoKill.Automation` — `HiddenDialogDetector` (finds modal dialogs hiding behind their owner or off-screen) + `DialogContentReader` (UI Automation, reads what the dialog is asking). Offers one action: **Reveal** — raise the dialog so the user can answer it.
+- `NoKill.App` — WPF dashboard: live window list with hang status + suspected-blockers panel with per-row Reveal button, auto-refresh every 3 s.
+- `NoKill.Cli` — same scan as a console table (`--flagged-only`, `--reveal`).
+- `samples/HungDemoApp` — deliberately misbehaving lab rat: freeze-on-click, deadlock, hidden modal dialog; `--auto-freeze <delayMs> <durationMs>` and `--auto-hidden-modal` for automated tests.
 - `NoKill.Core` / `NoKill.Vault` / `NoKill.Profiles` — models today; vault and app-specific rescue profiles are the next milestones.
 
 ## Build & test
@@ -32,7 +33,7 @@ dotnet run --project src/NoKill.App        # dashboard
 ## Roadmap
 
 1. ✅ Window inventory + conservative hang detection
-2. Hidden-dialog / blocker detection (UI Automation)
+2. ✅ Hidden-dialog / blocker detection + Reveal (UI Automation)
 3. Recovery Vault (preserve autosaves, logs, screenshots before intervention)
 4. Wait Chain Traversal diagnostics
 5. App-specific rescue profiles

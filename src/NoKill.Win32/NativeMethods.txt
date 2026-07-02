@@ -2,9 +2,14 @@ EnumWindows
 GetWindowText
 GetWindowTextLength
 IsWindowVisible
+IsWindowEnabled
+GetWindow
 GetWindowThreadProcessId
 IsHungAppWindow
 SendMessageTimeout
 GetShellWindow
+SetWindowPos
+MonitorFromWindow
 DwmGetWindowAttribute
 WM_NULL
+HWND_TOP

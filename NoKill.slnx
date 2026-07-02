@@ -4,6 +4,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/NoKill.App/NoKill.App.csproj" />
+    <Project Path="src/NoKill.Automation/NoKill.Automation.csproj" />
     <Project Path="src/NoKill.Cli/NoKill.Cli.csproj" />
     <Project Path="src/NoKill.Core/NoKill.Core.csproj" />
     <Project Path="src/NoKill.Diagnostics/NoKill.Diagnostics.csproj" />

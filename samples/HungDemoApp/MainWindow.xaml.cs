@@ -12,12 +12,22 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Supports automated testing: "HungDemoApp.exe --auto-freeze [delayMs] [durationMs]"
-    /// freezes the UI thread without any clicking (defaults: 1000 ms delay, 60 s freeze).
+    /// Supports automated testing:
+    ///   --auto-freeze [delayMs] [durationMs]  freeze the UI thread (defaults 1000, 60000)
+    ///   --auto-hidden-modal                   open the behind-the-owner modal on startup
     /// </summary>
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         string[] args = Environment.GetCommandLineArgs();
+
+        if (args.Contains("--auto-hidden-modal"))
+        {
+            Dispatcher.BeginInvoke(
+                () => HiddenModal_Click(this, new RoutedEventArgs()),
+                System.Windows.Threading.DispatcherPriority.Background);
+            return;
+        }
+
         int index = Array.IndexOf(args, "--auto-freeze");
         if (index < 0)
         {
@@ -98,9 +108,10 @@ public partial class MainWindow : Window
             },
         };
 
-        // Push the blocker below its owner before it blocks: simulates the
-        // classic "app looks frozen but a dialog is hiding behind it" case.
-        dialog.SourceInitialized += (_, _) =>
+        // Push the blocker below its owner AFTER it is shown (Loaded), because
+        // WPF's show pass would undo any earlier z-order placement. Simulates
+        // the classic "app looks frozen but a dialog is hiding behind it" case.
+        dialog.Loaded += (_, _) =>
         {
             var helper = new System.Windows.Interop.WindowInteropHelper(dialog);
             NativeMethods.PlaceBehindOwner(helper.Handle, new System.Windows.Interop.WindowInteropHelper(this).Handle);

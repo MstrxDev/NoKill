@@ -1,6 +1,7 @@
 using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.Graphics.Dwm;
+using Windows.Win32.UI.WindowsAndMessaging;
 
 namespace NoKill.Win32;
 
@@ -11,9 +12,9 @@ namespace NoKill.Win32;
 public static class WindowEnumerator
 {
     /// <summary>
-    /// Snapshots all top-level windows. Includes invisible/cloaked ones;
-    /// callers decide how to filter (the rescue engine will later care about
-    /// hidden windows precisely because they can be blockers).
+    /// Snapshots all top-level windows in z-order (front to back). Includes
+    /// invisible/cloaked ones; callers decide how to filter (the rescue
+    /// engine cares about hidden windows precisely because they can be blockers).
     /// </summary>
     public static unsafe IReadOnlyList<TopLevelWindow> Snapshot()
     {
@@ -22,7 +23,7 @@ public static class WindowEnumerator
         PInvoke.EnumWindows(
             (hwnd, _) =>
             {
-                results.Add(Describe(hwnd));
+                results.Add(Describe(hwnd, results.Count));
                 return true; // continue enumeration
             },
             default);
@@ -30,16 +31,24 @@ public static class WindowEnumerator
         return results;
     }
 
-    private static unsafe TopLevelWindow Describe(HWND hwnd)
+    private static unsafe TopLevelWindow Describe(HWND hwnd, int zOrder)
     {
         string title = GetTitle(hwnd);
 
         uint pid = 0;
         _ = PInvoke.GetWindowThreadProcessId(hwnd, &pid);
 
-        bool visible = PInvoke.IsWindowVisible(hwnd);
+        HWND owner = PInvoke.GetWindow(hwnd, GET_WINDOW_CMD.GW_OWNER);
 
-        return new TopLevelWindow((nint)hwnd.Value, title, pid, visible, IsCloaked(hwnd));
+        return new TopLevelWindow(
+            (nint)hwnd.Value,
+            title,
+            pid,
+            PInvoke.IsWindowVisible(hwnd),
+            IsCloaked(hwnd),
+            PInvoke.IsWindowEnabled(hwnd),
+            (nint)owner.Value,
+            zOrder);
     }
 
     private static string GetTitle(HWND hwnd)
