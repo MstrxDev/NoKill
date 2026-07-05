@@ -59,6 +59,13 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _isRefreshing;
 
+    /// <summary>Windows currently NotResponding — drives the tray icon's calm/alert state.</summary>
+    [ObservableProperty]
+    private int _notRespondingCount;
+
+    /// <summary>Watchdog announcements for the tray balloon (freeze preserved, recovery).</summary>
+    public event Action<string>? WatchdogNotification;
+
     [RelayCommand]
     private async Task RefreshAsync()
     {
@@ -82,6 +89,7 @@ public sealed partial class MainViewModel : ObservableObject
             Blockers = findings;
 
             int notResponding = snapshot.Count(w => w.Status == HangStatus.NotResponding);
+            NotRespondingCount = notResponding;
             int likelyHung = snapshot.Count(w => w.Status == HangStatus.LikelyHung);
             int hiddenBlockers = findings.Count(f => f.IsHiddenBlocker);
             StatusText =
@@ -128,11 +136,15 @@ public sealed partial class MainViewModel : ObservableObject
                     {
                         _activeIncidents[freezeEvent.ProcessId] = incidentId;
                     }
+
+                    WatchdogNotification?.Invoke(
+                        $"{freezeEvent.ProcessName} froze — evidence preserved to the vault.");
                 }
             }
             else
             {
                 StatusText = $"Watchdog: {freezeEvent.ProcessName} recovered or exited.";
+                WatchdogNotification?.Invoke($"{freezeEvent.ProcessName} recovered or exited.");
                 if (_activeIncidents.Remove(freezeEvent.ProcessId, out long incidentId))
                 {
                     try

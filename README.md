@@ -21,6 +21,7 @@ Task Manager is a hammer. NoKill detects hung apps, figures out *why* they're st
 - `NoKill.App` — WPF dashboard with two tabs: **Live monitor** (window list with hang status, Preserve/Diagnose per row, suspected-blockers panel with Reveal, auto-refresh every 3 s) and **Freeze history** (recorded incidents with durations and insights, top-offenders summary, one-click jump to each incident's vault entry).
 - `NoKill.Cli` — same scan as a console table (`--flagged-only`, `--reveal`, `--preserve <pid> [--dump triage|full|none]`, `--waitchain <pid>`; exit code 3 signals a detected deadlock).
 - **Freeze history** — a local SQLite log (`Documents\NoKill\history.db`) of every incident: process, start/end times, trigger (manual vs watchdog), vault entry, and the top diagnostic insight. `NoKill.Cli --history [n]` shows recent incidents and the top offenders, turning one-off rescues into patterns ("Blender has frozen 9 times this month"). Local-first like everything else.
+- **Tray / startup mode** — the dashboard lives in the notification area: closing or minimizing hides to the tray (the icon turns red while any app is Not Responding, and balloon tips announce watchdog preserves), double-click reopens, and the tray menu offers Open / Watchdog toggle / Start with Windows / Exit. `NoKill.App --minimized` starts hidden with the watchdog armed — exactly what the run-at-login registration uses (per-user Run key, no elevation; also scriptable via `--install-startup` / `--uninstall-startup`).
 - **Watchdog mode** — NoKill as a guardian instead of a tool you reach for: `NoKill.Cli --watch` (or the dashboard's "Auto-preserve on freeze" toggle) scans continuously and automatically preserves the full evidence package the moment any app is confirmed frozen. Conservative by construction: a freeze must persist past a confirm window (default 10 s) before it becomes an incident, each incident preserves exactly once, recovery re-arms detection, and a per-process cooldown (default 2 min) prevents evidence spam from a flapping app. Detection stays read-only — the watchdog preserves, it never intervenes.
 - `samples/HungDemoApp` — deliberately misbehaving lab rat: freeze-on-click, deadlock, hidden modal dialog; `--auto-freeze <delayMs> <durationMs>` and `--auto-hidden-modal` for automated tests.
 - `NoKill.Profiles` — rescue profiles as pure data, covering **any** process, not just known apps:
@@ -48,4 +49,5 @@ dotnet run --project src/NoKill.App        # dashboard
 6. ✅ Minidump capture into the vault (triage default, full opt-in)
 7. ✅ Background watchdog mode (auto-preserve on confirmed freeze, CLI + dashboard)
 8. ✅ Freeze history (SQLite incident log, `--history` query, top offenders)
-9. Research branch: process snapshots, cooperative recovery SDK
+9. ✅ Tray / startup mode (resident guardian, minimize-to-tray, run-at-login)
+10. Research branch: process snapshots, cooperative recovery SDK
