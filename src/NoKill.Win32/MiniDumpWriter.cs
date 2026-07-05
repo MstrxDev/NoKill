@@ -52,7 +52,31 @@ public static partial class MiniDumpWriter
     private const uint MiniDumpWithProcessThreadData = 0x00000100;
     private const uint MiniDumpWithThreadInfo = 0x00001000;
 
+    // HRESULT for ERROR_PARTIAL_COPY: the target's memory map changed mid-dump
+    // (process still initializing, or actively allocating). Transient — retry.
+    private const int PartialCopyHResult = unchecked((int)0x8007012B);
+
     public static (bool Success, string? Error) TryWrite(int pid, string outputPath, DumpDetail detail)
+    {
+        (bool Success, string? Error, int Code) result = (false, "not attempted", 0);
+        for (int attempt = 0; attempt < 3; attempt++)
+        {
+            if (attempt > 0)
+            {
+                Thread.Sleep(500);
+            }
+
+            result = TryWriteOnce(pid, outputPath, detail);
+            if (result.Success || result.Code != PartialCopyHResult)
+            {
+                break;
+            }
+        }
+
+        return (result.Success, result.Error);
+    }
+
+    private static (bool Success, string? Error, int Code) TryWriteOnce(int pid, string outputPath, DumpDetail detail)
     {
         try
         {
@@ -65,7 +89,8 @@ public static partial class MiniDumpWriter
 
             if (process.IsInvalid)
             {
-                return (false, $"Cannot open process {pid} (error {Marshal.GetLastWin32Error()}); elevation may be required.");
+                int openError = Marshal.GetLastWin32Error();
+                return (false, $"Cannot open process {pid} (error {openError}); elevation may be required.", openError);
             }
 
             uint dumpType = detail switch
@@ -83,19 +108,19 @@ public static partial class MiniDumpWriter
             {
                 if (MiniDumpWriteDump(process, (uint)pid, file.SafeFileHandle, dumpType, 0, 0, 0))
                 {
-                    return (true, null);
+                    return (true, null, 0);
                 }
             }
 
             // MiniDumpWriteDump reports failures as HRESULTs through last-error.
             int error = Marshal.GetLastWin32Error();
             TryDeletePartialFile(outputPath);
-            return (false, $"MiniDumpWriteDump failed with 0x{error:X8}.");
+            return (false, $"MiniDumpWriteDump failed with 0x{error:X8}.", error);
         }
         catch (Exception ex)
         {
             TryDeletePartialFile(outputPath);
-            return (false, ex.Message);
+            return (false, ex.Message, 0);
         }
     }
 

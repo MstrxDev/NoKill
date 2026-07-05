@@ -14,8 +14,15 @@ using NoKill.Win32;
 //   --waitchain <pid> analyze why a process's threads are blocked (deadlocks, waits)
 //   --watch           run as a background watchdog: auto-preserve evidence when
 //                     any app freezes (options: --dump, --poll-seconds, --confirm-seconds)
+//   --history [n]     show the last n freeze incidents (default 20) and top offenders
 bool flaggedOnly = args.Contains("--flagged-only");
 bool reveal = args.Contains("--reveal");
+
+if (args.Contains("--history"))
+{
+    int historyCount = int.TryParse(ReadOption(args, "--history"), out int h) ? h : 20;
+    return ShowHistory(historyCount);
+}
 
 if (args.Contains("--watch"))
 {
@@ -51,7 +58,7 @@ if (preserveArgIndex >= 0)
         return 2;
     }
 
-    return PreserveToVault(targetPid, dumpLevel);
+    return PreserveToVault(targetPid, dumpLevel, "manual").Code;
 }
 
 int waitChainArgIndex = Array.IndexOf(args, "--waitchain");
@@ -129,13 +136,19 @@ static async Task<int> RunWatchAsync(string dumpLevel, int pollSeconds, int conf
         ConfirmAfter = TimeSpan.FromSeconds(confirmSeconds),
     });
 
+    var activeIncidents = new Dictionary<int, long>();
+
     watchdog.FreezeDetected += incident =>
     {
         WatchLog($"FREEZE: {incident.ProcessName} (pid {incident.ProcessId}) " +
                  $"not responding for {incident.HungFor.TotalSeconds:F0}s — preserving evidence…");
         try
         {
-            PreserveToVault(incident.ProcessId, dumpLevel);
+            var (_, incidentId) = PreserveToVault(incident.ProcessId, dumpLevel, "watchdog");
+            if (incidentId > 0)
+            {
+                activeIncidents[incident.ProcessId] = incidentId;
+            }
         }
         catch (Exception ex)
         {
@@ -144,8 +157,21 @@ static async Task<int> RunWatchAsync(string dumpLevel, int pollSeconds, int conf
     };
 
     watchdog.FreezeEnded += incident =>
+    {
         WatchLog($"ENDED: {incident.ProcessName} (pid {incident.ProcessId}) recovered or exited " +
                  $"after {incident.HungFor.TotalSeconds:F0}s");
+        if (activeIncidents.Remove(incident.ProcessId, out long incidentId))
+        {
+            try
+            {
+                new FreezeHistory().MarkEnded(incidentId);
+            }
+            catch (Exception ex)
+            {
+                WatchLog($"history update failed: {ex.Message}");
+            }
+        }
+    };
 
     using var cts = new CancellationTokenSource();
     Console.CancelKeyPress += (_, e) =>
@@ -204,7 +230,54 @@ static int AnalyzeWaitChains(int pid)
     return report.DeadlockDetected ? 3 : 0;
 }
 
-static int PreserveToVault(int pid, string dumpLevel)
+static int ShowHistory(int count)
+{
+    var history = new FreezeHistory();
+    var recent = history.GetRecent(count);
+
+    if (recent.Count == 0)
+    {
+        Console.WriteLine("No freeze incidents recorded yet.");
+        return 0;
+    }
+
+    Console.WriteLine($"Last {recent.Count} freeze incident(s):");
+    Console.WriteLine($"{"WHEN",-17}  {"PROCESS",-20}  {"TRIGGER",-8}  {"DURATION",-9}  INSIGHT");
+    foreach (var record in recent)
+    {
+        string duration = record.EndedAt is { } ended
+            ? $"{(ended - record.StartedAt).TotalSeconds:F0}s"
+            : "?";
+        string insight = record.Insight ?? (record.VaultEntryPath is null ? "" : "evidence preserved");
+        if (insight.Length > 70)
+        {
+            insight = insight[..67] + "...";
+        }
+
+        Console.WriteLine(
+            $"{record.StartedAt:MM-dd HH:mm:ss}    {Truncate(record.ProcessName, 20),-20}  " +
+            $"{record.Trigger,-8}  {duration,-9}  {insight}");
+    }
+
+    var offenders = history.GetTopOffenders(5);
+    if (offenders.Count > 0)
+    {
+        Console.WriteLine();
+        Console.WriteLine("Top offenders:");
+        foreach (var offender in offenders)
+        {
+            Console.WriteLine(
+                $"  {offender.ProcessName}: {offender.IncidentCount} incident(s), " +
+                $"last {offender.LastIncidentAt:yyyy-MM-dd HH:mm}");
+        }
+    }
+
+    Console.WriteLine();
+    Console.WriteLine($"History database: {history.DatabasePath}");
+    return 0;
+}
+
+static (int Code, long IncidentId) PreserveToVault(int pid, string dumpLevel, string trigger)
 {
     var processInfo = ProcessInspector.TryInspect(pid);
     var inventory = new WindowInventoryService();
@@ -217,7 +290,7 @@ static int PreserveToVault(int pid, string dumpLevel)
     if (target is null && processInfo is null)
     {
         Console.Error.WriteLine($"No process with pid {pid} found (or access was denied).");
-        return 1;
+        return (1, 0);
     }
 
     string processName = target?.ProcessName ?? processInfo!.ProcessName;
@@ -229,6 +302,7 @@ static int PreserveToVault(int pid, string dumpLevel)
 
     var plan = new ArtifactPlanner().PlanFor(processName, exePath);
     var waitChains = new WaitChainAnalyzer().Analyze(pid);
+    IReadOnlyList<string> insights = waitChains is not null ? WaitChainInterpreter.Interpret(waitChains) : [];
 
     var vault = new RecoveryVault();
 
@@ -258,10 +332,10 @@ static int PreserveToVault(int pid, string dumpLevel)
         Artifacts = plan.Artifacts,
         AppliedProfiles = plan.AppliedProfiles,
         WaitChains = waitChains,
-        WaitChainInsights = waitChains is not null ? WaitChainInterpreter.Interpret(waitChains) : [],
+        WaitChainInsights = insights,
         MinidumpTempPath = dumpTempPath,
         MinidumpDetail = dumpTempPath is not null ? dumpLevel : null,
-        Reason = "manual preserve via CLI",
+        Reason = $"{trigger} preserve via CLI",
     });
 
     Console.WriteLine($"Vault entry: {result.EntryDirectory}");
@@ -280,7 +354,19 @@ static int PreserveToVault(int pid, string dumpLevel)
         Console.WriteLine($"  warning: {warning}");
     }
 
-    return 0;
+    long incidentId = 0;
+    try
+    {
+        incidentId = new FreezeHistory().RecordIncident(
+            processName, pid, exePath, trigger, result.EntryDirectory, insights.FirstOrDefault());
+        Console.WriteLine($"History: incident #{incidentId} recorded.");
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"History recording failed: {ex.Message}");
+    }
+
+    return (0, incidentId);
 }
 
 static string Truncate(string value, int max) =>
