@@ -16,6 +16,29 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly RecoveryVault _vault = new();
     private readonly ArtifactPlanner _planner = new();
 
+    // Watchdog rides the dashboard's own 3 s scan: 9 s confirm = 3 consecutive
+    // NotResponding scans before an incident is declared.
+    private readonly FreezeIncidentTracker _freezeTracker = new(new FreezeTrackerOptions
+    {
+        ConfirmAfter = TimeSpan.FromSeconds(9),
+        Cooldown = TimeSpan.FromMinutes(2),
+    });
+
+    [ObservableProperty]
+    private bool _watchdogEnabled;
+
+    partial void OnWatchdogEnabledChanged(bool value)
+    {
+        if (!value)
+        {
+            _freezeTracker.Reset(); // stale hung-since timestamps must not survive a toggle
+        }
+
+        StatusText = value
+            ? "Watchdog armed: evidence will be preserved automatically when an app freezes."
+            : "Watchdog disarmed.";
+    }
+
     [ObservableProperty]
     private IReadOnlyList<AppWindowInfo> _windows = [];
 
@@ -56,11 +79,49 @@ public sealed partial class MainViewModel : ObservableObject
             StatusText =
                 $"Last scan {DateTime.Now:HH:mm:ss} — {snapshot.Count} windows, " +
                 $"{notResponding} not responding, {likelyHung} likely hung, " +
-                $"{findings.Count} modal blocker(s) ({hiddenBlockers} hidden)";
+                $"{findings.Count} modal blocker(s) ({hiddenBlockers} hidden)" +
+                (WatchdogEnabled ? " — watchdog armed" : string.Empty);
+
+            if (WatchdogEnabled)
+            {
+                await RunWatchdogTickAsync(snapshot);
+            }
         }
         finally
         {
             IsRefreshing = false;
+        }
+    }
+
+    private async Task RunWatchdogTickAsync(IReadOnlyList<AppWindowInfo> snapshot)
+    {
+        int ownPid = Environment.ProcessId;
+        var observations = snapshot
+            .Where(w => w.ProcessId != ownPid)
+            .GroupBy(w => w.ProcessId)
+            .Select(g => new ProcessObservation(
+                g.Key, g.First().ProcessName, g.Any(w => w.Status == HangStatus.NotResponding)))
+            .ToList();
+
+        foreach (var freezeEvent in _freezeTracker.Observe(DateTimeOffset.Now, observations))
+        {
+            if (freezeEvent.Kind == FreezeEventKind.Started)
+            {
+                var target = snapshot
+                    .Where(w => w.ProcessId == freezeEvent.ProcessId)
+                    .OrderByDescending(w => w.Status)
+                    .FirstOrDefault();
+
+                if (target is not null)
+                {
+                    StatusText = $"Watchdog: {freezeEvent.ProcessName} froze — preserving evidence…";
+                    await PreserveAsync(target);
+                }
+            }
+            else
+            {
+                StatusText = $"Watchdog: {freezeEvent.ProcessName} recovered or exited.";
+            }
         }
     }
 

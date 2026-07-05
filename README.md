@@ -20,6 +20,7 @@ Task Manager is a hammer. NoKill detects hung apps, figures out *why* they're st
 - Minidump capture (`MiniDumpWriter`, Win32): every preserve includes a **triage** dump by default — thread stacks, handle data, unloaded modules, small enough to keep — with `--dump full` for full-memory dumps and `--dump none` to skip. Read-only observation: the target is briefly suspended for a consistent snapshot and resumes untouched. Dumps are staged on the vault volume and *moved* into the entry, never written twice.
 - `NoKill.App` — WPF dashboard: live window list with hang status + per-row Preserve button, suspected-blockers panel with per-row Reveal button, auto-refresh every 3 s.
 - `NoKill.Cli` — same scan as a console table (`--flagged-only`, `--reveal`, `--preserve <pid> [--dump triage|full|none]`, `--waitchain <pid>`; exit code 3 signals a detected deadlock).
+- **Watchdog mode** — NoKill as a guardian instead of a tool you reach for: `NoKill.Cli --watch` (or the dashboard's "Auto-preserve on freeze" toggle) scans continuously and automatically preserves the full evidence package the moment any app is confirmed frozen. Conservative by construction: a freeze must persist past a confirm window (default 10 s) before it becomes an incident, each incident preserves exactly once, recovery re-arms detection, and a per-process cooldown (default 2 min) prevents evidence spam from a flapping app. Detection stays read-only — the watchdog preserves, it never intervenes.
 - `samples/HungDemoApp` — deliberately misbehaving lab rat: freeze-on-click, deadlock, hidden modal dialog; `--auto-freeze <delayMs> <durationMs>` and `--auto-hidden-modal` for automated tests.
 - `NoKill.Profiles` — rescue profiles as pure data, covering **any** process, not just known apps:
   - a **universal heuristic profile** applies to every process (crash dumps, `%APPDATA%`/`%LOCALAPPDATA%` folders matching the process name, `%TEMP%` files, logs beside the executable, autosave/backup filename patterns) with conservative age/count caps;
@@ -44,4 +45,5 @@ dotnet run --project src/NoKill.App        # dashboard
 4. ✅ Rescue profiles: universal heuristics + built-ins + user JSON, windowless preserve
 5. ✅ Wait Chain Traversal diagnostics (deadlock cycles, blocker attribution, vault integration)
 6. ✅ Minidump capture into the vault (triage default, full opt-in)
-7. Research branch: process snapshots, cooperative recovery SDK
+7. ✅ Background watchdog mode (auto-preserve on confirmed freeze, CLI + dashboard)
+8. Research branch: process snapshots, cooperative recovery SDK

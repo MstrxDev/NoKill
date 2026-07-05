@@ -11,6 +11,9 @@
         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
             <Button DockPanel.Dock="Right" Content="Refresh" Padding="16,4"
                     Command="{Binding RefreshCommand}"/>
+            <CheckBox DockPanel.Dock="Right" Content="Auto-preserve on freeze (watchdog)"
+                      IsChecked="{Binding WatchdogEnabled}" VerticalAlignment="Center"
+                      Margin="0,0,16,0"/>
             <TextBlock Text="Open windows (read-only scan, refreshed every 3 s)"
                        VerticalAlignment="Center" FontWeight="Bold"/>
         </DockPanel>

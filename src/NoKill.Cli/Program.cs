@@ -12,8 +12,25 @@ using NoKill.Win32;
 //   --preserve <pid>  preserve rescue evidence for a process into the Recovery Vault
 //   --dump <level>    with --preserve: minidump level "triage" (default), "full", or "none"
 //   --waitchain <pid> analyze why a process's threads are blocked (deadlocks, waits)
+//   --watch           run as a background watchdog: auto-preserve evidence when
+//                     any app freezes (options: --dump, --poll-seconds, --confirm-seconds)
 bool flaggedOnly = args.Contains("--flagged-only");
 bool reveal = args.Contains("--reveal");
+
+if (args.Contains("--watch"))
+{
+    string watchDumpLevel = ReadOption(args, "--dump") ?? "triage";
+    if (watchDumpLevel is not ("triage" or "full" or "none"))
+    {
+        Console.Error.WriteLine($"Unknown dump level '{watchDumpLevel}'. Use triage, full, or none.");
+        return 2;
+    }
+
+    int pollSeconds = int.TryParse(ReadOption(args, "--poll-seconds"), out int p) ? p : 3;
+    int confirmSeconds = int.TryParse(ReadOption(args, "--confirm-seconds"), out int c) ? c : 10;
+
+    return await RunWatchAsync(watchDumpLevel, pollSeconds, confirmSeconds);
+}
 
 int preserveArgIndex = Array.IndexOf(args, "--preserve");
 if (preserveArgIndex >= 0)
@@ -103,6 +120,54 @@ else
 }
 
 return 0;
+
+static async Task<int> RunWatchAsync(string dumpLevel, int pollSeconds, int confirmSeconds)
+{
+    var watchdog = new Watchdog(new WatchdogOptions
+    {
+        PollInterval = TimeSpan.FromSeconds(pollSeconds),
+        ConfirmAfter = TimeSpan.FromSeconds(confirmSeconds),
+    });
+
+    watchdog.FreezeDetected += incident =>
+    {
+        WatchLog($"FREEZE: {incident.ProcessName} (pid {incident.ProcessId}) " +
+                 $"not responding for {incident.HungFor.TotalSeconds:F0}s — preserving evidence…");
+        try
+        {
+            PreserveToVault(incident.ProcessId, dumpLevel);
+        }
+        catch (Exception ex)
+        {
+            WatchLog($"preserve failed: {ex.Message}");
+        }
+    };
+
+    watchdog.FreezeEnded += incident =>
+        WatchLog($"ENDED: {incident.ProcessName} (pid {incident.ProcessId}) recovered or exited " +
+                 $"after {incident.HungFor.TotalSeconds:F0}s");
+
+    using var cts = new CancellationTokenSource();
+    Console.CancelKeyPress += (_, e) =>
+    {
+        e.Cancel = true;
+        cts.Cancel();
+    };
+
+    WatchLog($"Watchdog running: scanning every {pollSeconds}s, " +
+             $"confirming freezes after {confirmSeconds}s, dump level '{dumpLevel}'. Ctrl+C to stop.");
+    await watchdog.RunAsync(cts.Token);
+    WatchLog("Watchdog stopped.");
+    return 0;
+
+    static void WatchLog(string message) => Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {message}");
+}
+
+static string? ReadOption(string[] args, string name)
+{
+    int index = Array.IndexOf(args, name);
+    return index >= 0 && index + 1 < args.Length ? args[index + 1] : null;
+}
 
 static int AnalyzeWaitChains(int pid)
 {

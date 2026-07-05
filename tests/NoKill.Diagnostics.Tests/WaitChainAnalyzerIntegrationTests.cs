@@ -49,9 +49,20 @@ public class WaitChainAnalyzerIntegrationTests
         t1.Start();
         t2.Start();
         Assert.True(aHeld.Wait(5000) && bHeld.Wait(5000), "deadlock setup did not engage");
-        Thread.Sleep(500); // both threads reach their final blocking wait
 
-        var report = new WaitChainAnalyzer().Analyze(Environment.ProcessId);
+        // Poll rather than a fixed sleep: under load the threads can take a
+        // moment to reach their final blocking wait, and WCT only sees the
+        // cycle once both are parked.
+        Core.Models.WaitChainReport? report = null;
+        for (int attempt = 0; attempt < 20; attempt++)
+        {
+            Thread.Sleep(250);
+            report = new WaitChainAnalyzer().Analyze(Environment.ProcessId);
+            if (report is { DeadlockDetected: true })
+            {
+                break;
+            }
+        }
 
         Assert.NotNull(report);
 
