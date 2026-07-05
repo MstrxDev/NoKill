@@ -35,13 +35,19 @@
                     <DataGridTextColumn Header="Process" Binding="{Binding ProcessName}" Width="170"/>
                     <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="70"/>
                     <DataGridTextColumn Header="Window title" Binding="{Binding Title}" Width="*"/>
-                    <DataGridTemplateColumn Header="Action" Width="90">
+                    <DataGridTemplateColumn Header="Actions" Width="170">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <Button Content="Preserve" Padding="8,2" Margin="2"
-                                        Command="{Binding DataContext.PreserveCommand,
-                                                  RelativeSource={RelativeSource AncestorType=Window}}"
-                                        CommandParameter="{Binding}"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="Preserve" Padding="8,2" Margin="2"
+                                            Command="{Binding DataContext.PreserveCommand,
+                                                      RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"/>
+                                    <Button Content="Diagnose" Padding="8,2" Margin="2"
+                                            Command="{Binding DataContext.DiagnoseCommand,
+                                                      RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"/>
+                                </StackPanel>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>

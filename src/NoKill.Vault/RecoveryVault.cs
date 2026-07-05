@@ -51,6 +51,11 @@ public sealed class RecoveryVault
             WriteJson(entryDir, "windows.json", request.ProcessWindows, saved, warnings);
         }
 
+        if (request.WaitChains is not null)
+        {
+            WriteJson(entryDir, "wait-chains.json", request.WaitChains, saved, warnings);
+        }
+
         if (request.ScreenshotPng is { Length: > 0 })
         {
             string path = Path.Combine(entryDir, "screenshot.png");
@@ -252,6 +257,16 @@ public sealed class RecoveryVault
             foreach (var window in request.ProcessWindows)
             {
                 sb.AppendLine($"  [{window.Status}] \"{window.Title}\"");
+            }
+        }
+
+        if (request.WaitChainInsights.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("Wait-chain analysis:");
+            foreach (string insight in request.WaitChainInsights)
+            {
+                sb.AppendLine($"  - {insight}");
             }
         }
 

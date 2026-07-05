@@ -28,6 +28,14 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (args.Contains("--auto-deadlock"))
+        {
+            Dispatcher.BeginInvoke(
+                () => Deadlock_Click(this, new RoutedEventArgs()),
+                System.Windows.Threading.DispatcherPriority.Background);
+            return;
+        }
+
         int index = Array.IndexOf(args, "--auto-freeze");
         if (index < 0)
         {
@@ -59,31 +67,37 @@ public partial class MainWindow : Window
 
     private void Deadlock_Click(object sender, RoutedEventArgs e)
     {
-        StatusText.Text = "Status: deadlocking (kill me via Task Manager when done)";
-        var lockA = new object();
-        var lockB = new object();
-        var firstLockHeld = new ManualResetEventSlim();
+        StatusText.Text = "Status: deadlocking on two kernel mutexes (kill me via Task Manager when done)";
+
+        // Raw kernel mutexes + raw waits (see NativeMethods): the kernel
+        // tracks mutant ownership, so Wait Chain Traversal sees the full
+        // cycle, and the raw wait genuinely blocks the UI thread (WPF's
+        // dispatcher can't pump through a native WaitForSingleObject).
+        nint mutexA = NativeMethods.CreateMutexW(0, false, null);
+        nint mutexB = NativeMethods.CreateMutexW(0, false, null);
+
+        // Two-way sequencing: each thread must HOLD its first mutex before the
+        // other proceeds to the blocking wait, or one thread can win both
+        // mutexes and no deadlock forms.
+        var uiHoldsA = new ManualResetEventSlim();
+        var workerHoldsB = new ManualResetEventSlim();
 
         var worker = new Thread(() =>
         {
-            lock (lockB)
-            {
-                firstLockHeld.Set();
-                Thread.Sleep(200);
-                lock (lockA) { }
-            }
+            NativeMethods.WaitForSingleObject(mutexB, NativeMethods.Infinite);
+            workerHoldsB.Set();
+            uiHoldsA.Wait();
+            NativeMethods.WaitForSingleObject(mutexA, NativeMethods.Infinite); // holds B, wants A
         })
         { IsBackground = true };
         worker.Start();
 
         Dispatcher.BeginInvoke(() =>
         {
-            lock (lockA)
-            {
-                firstLockHeld.Wait();
-                Thread.Sleep(200);
-                lock (lockB) { } // UI thread wants B, worker holds B and wants A
-            }
+            NativeMethods.WaitForSingleObject(mutexA, NativeMethods.Infinite);
+            uiHoldsA.Set();
+            workerHoldsB.Wait();
+            NativeMethods.WaitForSingleObject(mutexB, NativeMethods.Infinite); // holds A, wants B — cycle
         }, DispatcherPriority.Background);
     }
 

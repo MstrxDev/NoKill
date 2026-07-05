@@ -22,6 +22,12 @@ public sealed record VaultEntryRequest
     /// <summary>Display names of the rescue profiles that contributed to this preserve.</summary>
     public IReadOnlyList<string> AppliedProfiles { get; init; } = [];
 
+    /// <summary>Wait-chain analysis of the target process, when available.</summary>
+    public WaitChainReport? WaitChains { get; init; }
+
+    /// <summary>Plain-English interpretation of the wait chains (computed by the caller).</summary>
+    public IReadOnlyList<string> WaitChainInsights { get; init; } = [];
+
     public IReadOnlyList<AppWindowInfo> ProcessWindows { get; init; } = [];
 
     public IReadOnlyList<BlockerFinding> Blockers { get; init; } = [];

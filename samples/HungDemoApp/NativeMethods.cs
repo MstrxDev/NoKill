@@ -16,4 +16,16 @@ internal static partial class NativeMethods
     /// <summary>Z-orders <paramref name="window"/> directly behind <paramref name="owner"/>.</summary>
     internal static void PlaceBehindOwner(nint window, nint owner) =>
         SetWindowPos(window, owner, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
+
+    // Raw kernel mutex + wait. Deliberately NOT System.Threading.Mutex:
+    // .NET's wait machinery is invisible to Wait Chain Traversal, and WPF's
+    // synchronization context pumps messages during managed waits. Raw waits
+    // give NoKill a real, diagnosable, WCT-visible deadlock.
+    internal const uint Infinite = 0xFFFFFFFF;
+
+    [LibraryImport("kernel32.dll", StringMarshalling = StringMarshalling.Utf16)]
+    internal static partial nint CreateMutexW(nint lpMutexAttributes, [MarshalAs(UnmanagedType.Bool)] bool bInitialOwner, string? lpName);
+
+    [LibraryImport("kernel32.dll")]
+    internal static partial uint WaitForSingleObject(nint hHandle, uint dwMilliseconds);
 }

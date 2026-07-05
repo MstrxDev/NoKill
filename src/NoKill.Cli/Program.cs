@@ -6,10 +6,11 @@ using NoKill.Vault;
 using NoKill.Win32;
 
 // nokill-cli: read-only window inventory + hidden-blocker detection + vault preserve.
-// Usage: NoKill.Cli [--flagged-only] [--reveal] [--preserve <pid>]
+// Usage: NoKill.Cli [--flagged-only] [--reveal] [--preserve <pid>] [--waitchain <pid>]
 //   --flagged-only    only list windows flagged as hung / likely hung
 //   --reveal          raise any hidden modal blockers found (the one safe action)
 //   --preserve <pid>  preserve rescue evidence for a process into the Recovery Vault
+//   --waitchain <pid> analyze why a process's threads are blocked (deadlocks, waits)
 bool flaggedOnly = args.Contains("--flagged-only");
 bool reveal = args.Contains("--reveal");
 
@@ -23,6 +24,18 @@ if (preserveArgIndex >= 0)
     }
 
     return PreserveToVault(targetPid);
+}
+
+int waitChainArgIndex = Array.IndexOf(args, "--waitchain");
+if (waitChainArgIndex >= 0)
+{
+    if (waitChainArgIndex + 1 >= args.Length || !int.TryParse(args[waitChainArgIndex + 1], out int wcPid))
+    {
+        Console.Error.WriteLine("Usage: NoKill.Cli --waitchain <pid>");
+        return 2;
+    }
+
+    return AnalyzeWaitChains(wcPid);
 }
 
 var inventory = new WindowInventoryService();
@@ -80,6 +93,41 @@ else
 
 return 0;
 
+static int AnalyzeWaitChains(int pid)
+{
+    var report = new WaitChainAnalyzer().Analyze(pid);
+    if (report is null)
+    {
+        Console.Error.WriteLine("Wait Chain Traversal is unavailable on this system.");
+        return 1;
+    }
+
+    Console.WriteLine($"Wait-chain analysis for pid {pid} ({report.Chains.Count} thread(s) walked):");
+    Console.WriteLine();
+
+    foreach (var chain in report.Chains)
+    {
+        string cycleMark = chain.IsCycle ? "  [DEADLOCK CYCLE]" : string.Empty;
+        string marker = chain.IsBlockedOnSomething || chain.IsCycle ? "*" : " ";
+        Console.WriteLine($" {marker} {WaitChainInterpreter.Describe(chain)}{cycleMark}");
+    }
+
+    Console.WriteLine();
+
+    Console.WriteLine("Insights:");
+    foreach (string insight in WaitChainInterpreter.Interpret(report))
+    {
+        Console.WriteLine($"  - {insight}");
+    }
+
+    foreach (string error in report.Errors)
+    {
+        Console.WriteLine($"  note: {error}");
+    }
+
+    return report.DeadlockDetected ? 3 : 0;
+}
+
 static int PreserveToVault(int pid)
 {
     var processInfo = ProcessInspector.TryInspect(pid);
@@ -104,6 +152,7 @@ static int PreserveToVault(int pid)
         : [];
 
     var plan = new ArtifactPlanner().PlanFor(processName, exePath);
+    var waitChains = new WaitChainAnalyzer().Analyze(pid);
 
     var vault = new RecoveryVault();
     var result = vault.Preserve(new VaultEntryRequest
@@ -115,6 +164,8 @@ static int PreserveToVault(int pid)
         ScreenshotPng = target is not null ? WindowCapture.TryCapturePng(target.WindowHandle) : null,
         Artifacts = plan.Artifacts,
         AppliedProfiles = plan.AppliedProfiles,
+        WaitChains = waitChains,
+        WaitChainInsights = waitChains is not null ? WaitChainInterpreter.Interpret(waitChains) : [],
         Reason = "manual preserve via CLI",
     });
 

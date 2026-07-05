@@ -12,5 +12,16 @@ SetWindowPos
 MonitorFromWindow
 GetWindowRect
 DwmGetWindowAttribute
+OpenThreadWaitChainSession
+GetThreadWaitChain
+CloseThreadWaitChainSession
+CreateToolhelp32Snapshot
+Thread32First
+Thread32Next
 WM_NULL
 HWND_TOP
+WCT_MAX_NODE_COUNT
+WCT_OUT_OF_PROC_FLAG
+WCT_OUT_OF_PROC_COM_FLAG
+WCT_OUT_OF_PROC_CS_FLAG
+WCT_NETWORK_IO_FLAG

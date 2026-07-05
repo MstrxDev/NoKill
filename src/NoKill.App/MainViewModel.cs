@@ -74,6 +74,7 @@ public sealed partial class MainViewModel : ObservableObject
             var processWindows = Windows.Where(w => w.ProcessId == target.ProcessId).ToList();
             var blockers = Blockers.Where(f => f.ProcessId == target.ProcessId).ToList();
             var plan = _planner.PlanFor(target.ProcessName, target.ExecutablePath);
+            var waitChains = new WaitChainAnalyzer().Analyze(target.ProcessId);
 
             return _vault.Preserve(new VaultEntryRequest
             {
@@ -84,6 +85,8 @@ public sealed partial class MainViewModel : ObservableObject
                 ScreenshotPng = WindowCapture.TryCapturePng(target.WindowHandle),
                 Artifacts = plan.Artifacts,
                 AppliedProfiles = plan.AppliedProfiles,
+                WaitChains = waitChains,
+                WaitChainInsights = waitChains is not null ? WaitChainInterpreter.Interpret(waitChains) : [],
                 Reason = "manual preserve from dashboard",
             });
         });
@@ -91,6 +94,18 @@ public sealed partial class MainViewModel : ObservableObject
         StatusText = result.Warnings.Count == 0
             ? $"Preserved {result.SavedFiles.Count} file(s) → {result.EntryDirectory}"
             : $"Preserved with {result.Warnings.Count} warning(s) → {result.EntryDirectory}";
+    }
+
+    [RelayCommand]
+    private async Task DiagnoseAsync(AppWindowInfo target)
+    {
+        StatusText = $"Analyzing wait chains of {target.ProcessName}…";
+
+        var report = await Task.Run(() => new WaitChainAnalyzer().Analyze(target.ProcessId));
+
+        StatusText = report is null
+            ? "Wait Chain Traversal is unavailable on this system."
+            : $"{target.ProcessName}: {WaitChainInterpreter.Interpret(report)[0]}";
     }
 
     [RelayCommand]
