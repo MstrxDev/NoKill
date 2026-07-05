@@ -9,6 +9,8 @@
     <Project Path="src/NoKill.Core/NoKill.Core.csproj" />
     <Project Path="src/NoKill.Diagnostics/NoKill.Diagnostics.csproj" />
     <Project Path="src/NoKill.Profiles/NoKill.Profiles.csproj" />
+    <Project Path="src/NoKill.Research/NoKill.Research.csproj" />
+    <Project Path="src/NoKill.Sdk/NoKill.Sdk.csproj" />
     <Project Path="src/NoKill.Vault/NoKill.Vault.csproj" />
     <Project Path="src/NoKill.Win32/NoKill.Win32.csproj" />
   </Folder>
@@ -16,6 +18,7 @@
     <Project Path="tests/NoKill.Core.Tests/NoKill.Core.Tests.csproj" />
     <Project Path="tests/NoKill.Diagnostics.Tests/NoKill.Diagnostics.Tests.csproj" />
     <Project Path="tests/NoKill.Profiles.Tests/NoKill.Profiles.Tests.csproj" />
+    <Project Path="tests/NoKill.Research.Tests/NoKill.Research.Tests.csproj" />
     <Project Path="tests/NoKill.Vault.Tests/NoKill.Vault.Tests.csproj" />
   </Folder>
 </Solution>

@@ -2,6 +2,8 @@ using NoKill.Automation;
 using NoKill.Core.Models;
 using NoKill.Diagnostics;
 using NoKill.Profiles;
+using NoKill.Research;
+using NoKill.Sdk;
 using NoKill.Vault;
 using NoKill.Win32;
 
@@ -15,8 +17,30 @@ using NoKill.Win32;
 //   --watch           run as a background watchdog: auto-preserve evidence when
 //                     any app freezes (options: --dump, --poll-seconds, --confirm-seconds)
 //   --history [n]     show the last n freeze incidents (default 20) and top offenders
+//   --snapshot <pid>  RESEARCH: capture a Pss diagnostic snapshot (requires --research)
+//   --research        opt in to experimental research-branch features
 bool flaggedOnly = args.Contains("--flagged-only");
 bool reveal = args.Contains("--reveal");
+bool researchEnabled = args.Contains("--research");
+
+int snapshotArgIndex = Array.IndexOf(args, "--snapshot");
+if (snapshotArgIndex >= 0)
+{
+    if (!researchEnabled)
+    {
+        Console.Error.WriteLine(
+            "--snapshot is an experimental research feature. Re-run with --research to opt in.");
+        return 2;
+    }
+
+    if (snapshotArgIndex + 1 >= args.Length || !int.TryParse(args[snapshotArgIndex + 1], out int snapPid))
+    {
+        Console.Error.WriteLine("Usage: NoKill.Cli --snapshot <pid> --research");
+        return 2;
+    }
+
+    return RunSnapshot(snapPid);
+}
 
 if (args.Contains("--history"))
 {
@@ -228,6 +252,61 @@ static int AnalyzeWaitChains(int pid)
     }
 
     return report.DeadlockDetected ? 3 : 0;
+}
+
+static int RunSnapshot(int pid)
+{
+    Console.WriteLine("== RESEARCH: process snapshot (diagnostic only, not a runnable clone) ==");
+
+    var report = new ProcessSnapshotService().Capture(pid);
+    if (!report.Captured)
+    {
+        Console.Error.WriteLine($"Snapshot failed: {report.Error}");
+        return 1;
+    }
+
+    Console.WriteLine($"Captured snapshot of pid {pid} at {report.CapturedAt:HH:mm:ss}:");
+    Console.WriteLine($"  VA clone created: {report.VaCloneCreated}");
+    Console.WriteLine($"  Threads captured: {report.ThreadCount}");
+    Console.WriteLine($"  Handles captured: {report.HandleCount}");
+
+    // Cooperative recovery: surface any checkpoints the app wrote via the SDK.
+    var processName = TryGetProcessName(pid);
+    if (processName is not null)
+    {
+        var checkpoints = new CooperativeCheckpointReader().GetCheckpoints(processName);
+        Console.WriteLine();
+        if (checkpoints.Count > 0)
+        {
+            Console.WriteLine($"Cooperative recovery checkpoints for '{processName}':");
+            foreach (var checkpoint in checkpoints)
+            {
+                Console.WriteLine(
+                    $"  {checkpoint.LastWriteUtc.ToLocalTime():HH:mm:ss}  " +
+                    $"{checkpoint.SizeBytes,8} B  {Path.GetFileName(checkpoint.Path)}");
+            }
+        }
+        else
+        {
+            Console.WriteLine($"No cooperative recovery checkpoints found for '{processName}' " +
+                              "(the app has not integrated NoKill.Sdk).");
+        }
+    }
+
+    return 0;
+}
+
+static string? TryGetProcessName(int pid)
+{
+    try
+    {
+        using var process = System.Diagnostics.Process.GetProcessById(pid);
+        return process.ProcessName;
+    }
+    catch
+    {
+        return null;
+    }
 }
 
 static int ShowHistory(int count)

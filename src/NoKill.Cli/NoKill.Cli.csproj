@@ -6,6 +6,8 @@
     <ProjectReference Include="..\NoKill.Automation\NoKill.Automation.csproj" />
     <ProjectReference Include="..\NoKill.Vault\NoKill.Vault.csproj" />
     <ProjectReference Include="..\NoKill.Profiles\NoKill.Profiles.csproj" />
+    <ProjectReference Include="..\NoKill.Research\NoKill.Research.csproj" />
+    <ProjectReference Include="..\NoKill.Sdk\NoKill.Sdk.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

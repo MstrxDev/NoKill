@@ -1,0 +1,4 @@
+PssCaptureSnapshot
+PssQuerySnapshot
+PssFreeSnapshot
+OpenProcess

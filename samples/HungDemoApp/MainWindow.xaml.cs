@@ -1,14 +1,37 @@
 using System.Windows;
 using System.Windows.Threading;
+using NoKill.Sdk;
 
 namespace HungDemoApp;
 
 public partial class MainWindow : Window
 {
+    private Timer? _checkpointTimer;
+
     public MainWindow()
     {
         InitializeComponent();
         Loaded += OnLoaded;
+    }
+
+    /// <summary>
+    /// Cooperative-recovery demo: a background timer journals "unsaved work"
+    /// every second via NoKill.Sdk. Because it runs off the UI thread, the
+    /// last checkpoint survives even when the UI is frozen — exactly what the
+    /// cooperative recovery model is for.
+    /// </summary>
+    private void StartCooperativeCheckpoints()
+    {
+        var checkpoint = new RecoveryCheckpoint("HungDemoApp");
+        int counter = 0;
+
+        // System.Threading.Timer runs on the thread pool, not the dispatcher,
+        // so a frozen UI thread cannot stop it from writing.
+        _checkpointTimer = new Timer(_ =>
+        {
+            int n = Interlocked.Increment(ref counter);
+            checkpoint.Save($"Unsaved document — edit #{n} at {DateTime.Now:O}", "document");
+        }, null, dueTime: 0, period: 1000);
     }
 
     /// <summary>
@@ -19,6 +42,12 @@ public partial class MainWindow : Window
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         string[] args = Environment.GetCommandLineArgs();
+
+        // Cooperative checkpoints run alongside any scenario (including a freeze).
+        if (args.Contains("--auto-checkpoint"))
+        {
+            StartCooperativeCheckpoints();
+        }
 
         if (args.Contains("--auto-hidden-modal"))
         {

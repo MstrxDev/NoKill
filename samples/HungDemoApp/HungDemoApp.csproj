@@ -9,4 +9,9 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Demonstrates the cooperative recovery SDK from a real app. -->
+    <ProjectReference Include="..\..\src\NoKill.Sdk\NoKill.Sdk.csproj" />
+  </ItemGroup>
+
 </Project>

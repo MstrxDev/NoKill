@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- netstandard2.0 so any .NET Framework 4.6.1+ / .NET Core / .NET 5+ app can embed it. -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <PackageId>NoKill.Sdk</PackageId>
+    <Description>Cooperative recovery SDK: let an app checkpoint unsaved state so NoKill can preserve it even if the UI freezes.</Description>
+  </PropertyGroup>
+
+</Project>
