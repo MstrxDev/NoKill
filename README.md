@@ -16,9 +16,10 @@ Task Manager is a hammer. NoKill detects hung apps, figures out *why* they're st
 - `NoKill.Win32` — Win32 interop (CsWin32): window enumeration (z-order, owner chain, enabled state), `IsHungAppWindow`, `WM_NULL` ping via `SendMessageTimeout`. All read-only except `WindowActions` — the single, auditable place allowed to touch another window (z-order raise only, no activation, no input).
 - `NoKill.Diagnostics` — `WindowInventoryService` (desktop snapshot), `HangScorer` and `BlockerClassifier` (pure, tested signal/window-facts logic), and `WaitChainAnalyzer` + `WaitChainInterpreter`: Wait Chain Traversal answers *why* a process is stuck — deadlock cycles, mutex owners, cross-process waits, SendMessage/COM/RPC waits, network I/O — in plain English. Honest about its limits: waits WCT can't attribute (events, .NET managed locks) are reported as such, never guessed at.
 - `NoKill.Automation` — `HiddenDialogDetector` (finds modal dialogs hiding behind their owner or off-screen) + `DialogContentReader` (UI Automation, reads what the dialog is asking). Offers one action: **Reveal** — raise the dialog so the user can answer it.
-- `NoKill.Vault` — the Recovery Vault: preserves rescue evidence (JSON + human-readable reports, process info, window list, screenshot, recovery artifacts) into a per-incident folder under `Documents\NoKill\Vault\`. Copy-only: sources are never modified, entries are never overwritten, and problems become warnings, not aborted preserves.
+- `NoKill.Vault` — the Recovery Vault: preserves rescue evidence (JSON + human-readable reports, process info, window list, screenshot, wait chains, minidump, recovery artifacts) into a per-incident folder under `Documents\NoKill\Vault\`. Copy-only: sources are never modified, entries are never overwritten, and problems become warnings, not aborted preserves.
+- Minidump capture (`MiniDumpWriter`, Win32): every preserve includes a **triage** dump by default — thread stacks, handle data, unloaded modules, small enough to keep — with `--dump full` for full-memory dumps and `--dump none` to skip. Read-only observation: the target is briefly suspended for a consistent snapshot and resumes untouched. Dumps are staged on the vault volume and *moved* into the entry, never written twice.
 - `NoKill.App` — WPF dashboard: live window list with hang status + per-row Preserve button, suspected-blockers panel with per-row Reveal button, auto-refresh every 3 s.
-- `NoKill.Cli` — same scan as a console table (`--flagged-only`, `--reveal`, `--preserve <pid>`, `--waitchain <pid>`; exit code 3 signals a detected deadlock).
+- `NoKill.Cli` — same scan as a console table (`--flagged-only`, `--reveal`, `--preserve <pid> [--dump triage|full|none]`, `--waitchain <pid>`; exit code 3 signals a detected deadlock).
 - `samples/HungDemoApp` — deliberately misbehaving lab rat: freeze-on-click, deadlock, hidden modal dialog; `--auto-freeze <delayMs> <durationMs>` and `--auto-hidden-modal` for automated tests.
 - `NoKill.Profiles` — rescue profiles as pure data, covering **any** process, not just known apps:
   - a **universal heuristic profile** applies to every process (crash dumps, `%APPDATA%`/`%LOCALAPPDATA%` folders matching the process name, `%TEMP%` files, logs beside the executable, autosave/backup filename patterns) with conservative age/count caps;
@@ -42,4 +43,5 @@ dotnet run --project src/NoKill.App        # dashboard
 3. ✅ Recovery Vault (reports, screenshot, process info; artifact engine ready for profiles)
 4. ✅ Rescue profiles: universal heuristics + built-ins + user JSON, windowless preserve
 5. ✅ Wait Chain Traversal diagnostics (deadlock cycles, blocker attribution, vault integration)
-6. Research branch: process snapshots, cooperative recovery SDK
+6. ✅ Minidump capture into the vault (triage default, full opt-in)
+7. Research branch: process snapshots, cooperative recovery SDK

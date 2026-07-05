@@ -10,6 +10,7 @@ using NoKill.Win32;
 //   --flagged-only    only list windows flagged as hung / likely hung
 //   --reveal          raise any hidden modal blockers found (the one safe action)
 //   --preserve <pid>  preserve rescue evidence for a process into the Recovery Vault
+//   --dump <level>    with --preserve: minidump level "triage" (default), "full", or "none"
 //   --waitchain <pid> analyze why a process's threads are blocked (deadlocks, waits)
 bool flaggedOnly = args.Contains("--flagged-only");
 bool reveal = args.Contains("--reveal");
@@ -19,11 +20,21 @@ if (preserveArgIndex >= 0)
 {
     if (preserveArgIndex + 1 >= args.Length || !int.TryParse(args[preserveArgIndex + 1], out int targetPid))
     {
-        Console.Error.WriteLine("Usage: NoKill.Cli --preserve <pid>");
+        Console.Error.WriteLine("Usage: NoKill.Cli --preserve <pid> [--dump triage|full|none]");
         return 2;
     }
 
-    return PreserveToVault(targetPid);
+    int dumpArgIndex = Array.IndexOf(args, "--dump");
+    string dumpLevel = dumpArgIndex >= 0 && dumpArgIndex + 1 < args.Length
+        ? args[dumpArgIndex + 1].ToLowerInvariant()
+        : "triage";
+    if (dumpLevel is not ("triage" or "full" or "none"))
+    {
+        Console.Error.WriteLine($"Unknown dump level '{dumpLevel}'. Use triage, full, or none.");
+        return 2;
+    }
+
+    return PreserveToVault(targetPid, dumpLevel);
 }
 
 int waitChainArgIndex = Array.IndexOf(args, "--waitchain");
@@ -128,7 +139,7 @@ static int AnalyzeWaitChains(int pid)
     return report.DeadlockDetected ? 3 : 0;
 }
 
-static int PreserveToVault(int pid)
+static int PreserveToVault(int pid, string dumpLevel)
 {
     var processInfo = ProcessInspector.TryInspect(pid);
     var inventory = new WindowInventoryService();
@@ -155,6 +166,23 @@ static int PreserveToVault(int pid)
     var waitChains = new WaitChainAnalyzer().Analyze(pid);
 
     var vault = new RecoveryVault();
+
+    string? dumpTempPath = null;
+    if (dumpLevel != "none")
+    {
+        var detail = dumpLevel == "full" ? DumpDetail.Full : DumpDetail.Triage;
+        string stagePath = vault.CreateTempFilePath(".dmp");
+        var (dumpOk, dumpError) = MiniDumpWriter.TryWrite(pid, stagePath, detail);
+        if (dumpOk)
+        {
+            dumpTempPath = stagePath;
+        }
+        else
+        {
+            Console.Error.WriteLine($"Minidump capture failed: {dumpError}");
+        }
+    }
+
     var result = vault.Preserve(new VaultEntryRequest
     {
         TargetWindow = target,
@@ -166,6 +194,8 @@ static int PreserveToVault(int pid)
         AppliedProfiles = plan.AppliedProfiles,
         WaitChains = waitChains,
         WaitChainInsights = waitChains is not null ? WaitChainInterpreter.Interpret(waitChains) : [],
+        MinidumpTempPath = dumpTempPath,
+        MinidumpDetail = dumpTempPath is not null ? dumpLevel : null,
         Reason = "manual preserve via CLI",
     });
 

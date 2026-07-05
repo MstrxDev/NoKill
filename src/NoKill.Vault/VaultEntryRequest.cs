@@ -37,6 +37,17 @@ public sealed record VaultEntryRequest
     /// <summary>Recovery artifacts to COPY into the vault. Sources are never modified, moved, or deleted.</summary>
     public IReadOnlyList<ArtifactSource> Artifacts { get; init; } = [];
 
+    /// <summary>
+    /// Path to a minidump NoKill itself just captured into vault temp space
+    /// (see <see cref="RecoveryVault.CreateTempFilePath"/>). Unlike artifacts
+    /// — which are user data and only ever copied — this file is NoKill's own
+    /// and is MOVED into the entry, so a large dump is never written twice.
+    /// </summary>
+    public string? MinidumpTempPath { get; init; }
+
+    /// <summary>Dump detail label for the report ("triage", "full").</summary>
+    public string? MinidumpDetail { get; init; }
+
     /// <summary>Why this entry was created, e.g. "manual preserve from dashboard".</summary>
     public string Reason { get; init; } = "manual";
 }

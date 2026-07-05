@@ -32,6 +32,17 @@ public sealed class RecoveryVault
 
     public string RootDirectory => _rootDirectory;
 
+    /// <summary>
+    /// A temp path on the SAME volume as the vault, so files staged here
+    /// (e.g. a minidump being captured) move into an entry instantly.
+    /// </summary>
+    public string CreateTempFilePath(string extension)
+    {
+        string tempDir = Path.Combine(_rootDirectory, ".tmp");
+        Directory.CreateDirectory(tempDir);
+        return Path.Combine(tempDir, $"{Guid.NewGuid():N}{extension}");
+    }
+
     public VaultEntryResult Preserve(VaultEntryRequest request)
     {
         string entryDir = CreateEntryDirectory(request);
@@ -61,6 +72,11 @@ public sealed class RecoveryVault
             string path = Path.Combine(entryDir, "screenshot.png");
             File.WriteAllBytes(path, request.ScreenshotPng);
             saved.Add(path);
+        }
+
+        if (request.MinidumpTempPath is { } dumpTemp)
+        {
+            MoveMinidumpIn(entryDir, dumpTemp, saved, warnings);
         }
 
         foreach (var artifact in request.Artifacts)
@@ -94,6 +110,27 @@ public sealed class RecoveryVault
 
         Directory.CreateDirectory(candidate);
         return candidate;
+    }
+
+    private static void MoveMinidumpIn(
+        string entryDir, string dumpTemp, List<string> saved, List<string> warnings)
+    {
+        try
+        {
+            if (!File.Exists(dumpTemp))
+            {
+                warnings.Add($"Minidump temp file not found: {dumpTemp}");
+                return;
+            }
+
+            string target = Path.Combine(entryDir, "minidump.dmp");
+            File.Move(dumpTemp, target); // same volume when staged via CreateTempFilePath
+            saved.Add(target);
+        }
+        catch (Exception ex)
+        {
+            warnings.Add($"Failed to move minidump into vault: {ex.Message}");
+        }
     }
 
     private static void CopyArtifact(
@@ -258,6 +295,12 @@ public sealed class RecoveryVault
             {
                 sb.AppendLine($"  [{window.Status}] \"{window.Title}\"");
             }
+        }
+
+        if (request.MinidumpTempPath is not null)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"Minidump:  captured ({request.MinidumpDetail ?? "triage"} level) → minidump.dmp");
         }
 
         if (request.WaitChainInsights.Count > 0)

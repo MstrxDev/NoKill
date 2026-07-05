@@ -76,6 +76,9 @@ public sealed partial class MainViewModel : ObservableObject
             var plan = _planner.PlanFor(target.ProcessName, target.ExecutablePath);
             var waitChains = new WaitChainAnalyzer().Analyze(target.ProcessId);
 
+            string dumpStage = _vault.CreateTempFilePath(".dmp");
+            var (dumpOk, _) = MiniDumpWriter.TryWrite(target.ProcessId, dumpStage, DumpDetail.Triage);
+
             return _vault.Preserve(new VaultEntryRequest
             {
                 TargetWindow = target,
@@ -87,6 +90,8 @@ public sealed partial class MainViewModel : ObservableObject
                 AppliedProfiles = plan.AppliedProfiles,
                 WaitChains = waitChains,
                 WaitChainInsights = waitChains is not null ? WaitChainInterpreter.Interpret(waitChains) : [],
+                MinidumpTempPath = dumpOk ? dumpStage : null,
+                MinidumpDetail = dumpOk ? "triage" : null,
                 Reason = "manual preserve from dashboard",
             });
         });

@@ -172,6 +172,45 @@ public sealed class RecoveryVaultTests : IDisposable
     }
 
     [Fact]
+    public void Minidump_IsMovedIntoEntry_NotCopied()
+    {
+        var vault = new RecoveryVault(_vaultRoot);
+        string staged = vault.CreateTempFilePath(".dmp");
+        File.WriteAllBytes(staged, [1, 2, 3]);
+
+        var result = vault.Preserve(new VaultEntryRequest
+        {
+            TargetWindow = Target(),
+            MinidumpTempPath = staged,
+            MinidumpDetail = "triage",
+        });
+
+        string target = Path.Combine(result.EntryDirectory, "minidump.dmp");
+        Assert.True(File.Exists(target));
+        Assert.False(File.Exists(staged)); // moved, not copied — it was NoKill's own temp file
+        Assert.Contains(result.SavedFiles, f => f.EndsWith("minidump.dmp"));
+
+        string txt = File.ReadAllText(Path.Combine(result.EntryDirectory, "rescue-report.txt"));
+        Assert.Contains("Minidump:", txt);
+        Assert.Contains("triage", txt);
+    }
+
+    [Fact]
+    public void MissingMinidumpTemp_ProducesWarningNotException()
+    {
+        var vault = new RecoveryVault(_vaultRoot);
+
+        var result = vault.Preserve(new VaultEntryRequest
+        {
+            TargetWindow = Target(),
+            MinidumpTempPath = Path.Combine(_vaultRoot, ".tmp", "gone.dmp"),
+        });
+
+        Assert.True(Directory.Exists(result.EntryDirectory));
+        Assert.Contains(result.Warnings, w => w.Contains("Minidump temp file not found"));
+    }
+
+    [Fact]
     public void Screenshot_IsSavedWhenProvided()
     {
         var vault = new RecoveryVault(_vaultRoot);
