@@ -48,6 +48,12 @@ public sealed partial class MainViewModel : ObservableObject
     private IReadOnlyList<BlockerFinding> _blockers = [];
 
     [ObservableProperty]
+    private IReadOnlyList<FreezeIncidentRecord> _historyRecords = [];
+
+    [ObservableProperty]
+    private IReadOnlyList<FreezeOffender> _topOffenders = [];
+
+    [ObservableProperty]
     private string _statusText = "Scanning…";
 
     [ObservableProperty]
@@ -196,7 +202,42 @@ public sealed partial class MainViewModel : ObservableObject
             ? $"Preserved {result.SavedFiles.Count} file(s) → {result.EntryDirectory}"
             : $"Preserved with {result.Warnings.Count} warning(s) → {result.EntryDirectory}";
 
+        await RefreshHistoryAsync(); // the new incident should appear immediately
         return incidentId;
+    }
+
+    [RelayCommand]
+    private async Task RefreshHistoryAsync()
+    {
+        try
+        {
+            var (records, offenders) = await Task.Run(() =>
+                (_history.GetRecent(100), _history.GetTopOffenders(5)));
+
+            HistoryRecords = records;
+            TopOffenders = offenders;
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Could not load freeze history: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private void OpenVaultEntry(FreezeIncidentRecord record)
+    {
+        if (record.VaultEntryPath is { } path && System.IO.Directory.Exists(path))
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = path,
+                UseShellExecute = true, // open the folder in Explorer
+            });
+        }
+        else
+        {
+            StatusText = "Vault entry folder not found (moved or deleted).";
+        }
     }
 
     [RelayCommand]

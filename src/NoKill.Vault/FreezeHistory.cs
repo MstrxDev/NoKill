@@ -24,6 +24,9 @@ public sealed record FreezeIncidentRecord
 
     /// <summary>Top diagnostic insight at capture time (wait-chain summary etc.).</summary>
     public string? Insight { get; init; }
+
+    /// <summary>How long the freeze lasted, when the end was observed (watchdog incidents).</summary>
+    public TimeSpan? Duration => EndedAt - StartedAt;
 }
 
 /// <summary>Aggregate view: which apps freeze the most.</summary>

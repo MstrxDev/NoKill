@@ -14,7 +14,7 @@
             <CheckBox DockPanel.Dock="Right" Content="Auto-preserve on freeze (watchdog)"
                       IsChecked="{Binding WatchdogEnabled}" VerticalAlignment="Center"
                       Margin="0,0,16,0"/>
-            <TextBlock Text="Open windows (read-only scan, refreshed every 3 s)"
+            <TextBlock Text="Read-only scan, refreshed every 3 s"
                        VerticalAlignment="Center" FontWeight="Bold"/>
         </DockPanel>
 
@@ -22,7 +22,9 @@
             <StatusBarItem Content="{Binding StatusText}"/>
         </StatusBar>
 
-        <Grid>
+        <TabControl>
+            <TabItem Header="Live monitor">
+        <Grid Margin="0,6,0,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="2*"/>
                 <RowDefinition Height="Auto"/>
@@ -108,5 +110,82 @@
                 </DataGrid.RowStyle>
             </DataGrid>
         </Grid>
+            </TabItem>
+
+            <TabItem Header="Freeze history">
+                <Grid Margin="0,6,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <DockPanel Grid.Row="0" Margin="0,0,0,6">
+                        <Button DockPanel.Dock="Right" Content="Refresh history" Padding="12,4"
+                                Command="{Binding RefreshHistoryCommand}"/>
+                        <TextBlock Text="Recorded freeze incidents (newest first)"
+                                   FontWeight="Bold" VerticalAlignment="Center"/>
+                    </DockPanel>
+
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding HistoryRecords}"
+                              AutoGenerateColumns="False" IsReadOnly="True"
+                              HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                              SelectionMode="Single">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="When"
+                                                Binding="{Binding StartedAt, StringFormat='MM-dd HH:mm:ss'}"
+                                                Width="120"/>
+                            <DataGridTextColumn Header="Process" Binding="{Binding ProcessName}" Width="150"/>
+                            <DataGridTextColumn Header="Trigger" Binding="{Binding Trigger}" Width="80"/>
+                            <DataGridTextColumn Header="Duration"
+                                                Binding="{Binding Duration.TotalSeconds, StringFormat='{}{0:F0} s'}"
+                                                Width="80"/>
+                            <DataGridTextColumn Header="Insight" Binding="{Binding Insight}" Width="*"/>
+                            <DataGridTemplateColumn Header="Evidence" Width="100">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="Open entry" Padding="8,2" Margin="2"
+                                                Command="{Binding DataContext.OpenVaultEntryCommand,
+                                                          RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Trigger}" Value="watchdog">
+                                        <Setter Property="Background" Value="#EAF2FF"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
+                    </DataGrid>
+
+                    <DockPanel Grid.Row="2" Margin="0,8,0,0">
+                        <TextBlock DockPanel.Dock="Left" Text="Top offenders:  "
+                                   FontWeight="Bold" VerticalAlignment="Center"/>
+                        <ItemsControl ItemsSource="{Binding TopOffenders}" VerticalAlignment="Center">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#F0F0F0" CornerRadius="3" Padding="6,2" Margin="0,0,8,0">
+                                        <TextBlock>
+                                            <Run Text="{Binding ProcessName, Mode=OneWay}" FontWeight="Bold"/>
+                                            <Run Text="{Binding IncidentCount, Mode=OneWay, StringFormat='×{0}'}"/>
+                                        </TextBlock>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </DockPanel>
+                </Grid>
+            </TabItem>
+        </TabControl>
     </DockPanel>
 </Window>

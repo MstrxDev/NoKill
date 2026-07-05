@@ -19,6 +19,7 @@ public partial class MainWindow : Window
         Loaded += (_, _) =>
         {
             _viewModel.RefreshCommand.Execute(null);
+            _viewModel.RefreshHistoryCommand.Execute(null);
             _refreshTimer.Start();
         };
         Closed += (_, _) => _refreshTimer.Stop();
