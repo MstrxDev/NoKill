@@ -27,7 +27,7 @@ Task Manager is a hammer. NoKill detects hung apps, figures out *why* they're st
 - `samples/HungDemoApp` — deliberately misbehaving lab rat: freeze-on-click, deadlock, hidden modal dialog; `--auto-freeze <delayMs> <durationMs>` and `--auto-hidden-modal` for automated tests.
 - `NoKill.Profiles` — rescue profiles as pure data, covering **any** process, not just known apps:
   - a **universal heuristic profile** applies to every process (crash dumps, `%APPDATA%`/`%LOCALAPPDATA%` folders matching the process name, `%TEMP%` files, logs beside the executable, autosave/backup filename patterns) with conservative age/count caps;
-  - **built-in profiles** for Blender, Roblox Studio, Visual Studio, VS Code, Notepad++, Office, Chrome, Discord layer precision on top;
+  - **built-in profiles** layer precision on top for 21 apps: Blender, Roblox Studio/Player, Visual Studio, VS Code, Notepad++, Office, Chrome, Discord, Photoshop, Premiere Pro, FL Studio, OBS Studio, Unity, Firefox, Edge, Windows 11 Notepad (full unsaved-tab contents), Audacity, Krita, the JetBrains IDE family, Sublime Text (unsaved buffers in the session file), and Paint.NET;
   - **user JSON profiles** in `Documents\NoKill\Profiles\*.json` add or override any of the above without recompiling.
   Windowless services and background processes are first-class: preserve works by PID with no window (no screenshot, everything else intact).
 

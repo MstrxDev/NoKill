@@ -52,8 +52,8 @@ public static class BuiltInProfiles
         new()
         {
             Id = "roblox-studio",
-            DisplayName = "Roblox Studio",
-            ProcessNames = ["RobloxStudioBeta", "RobloxStudio"],
+            DisplayName = "Roblox Studio / Player",
+            ProcessNames = ["RobloxStudioBeta", "RobloxStudio", "RobloxPlayerBeta"],
             ArtifactRules =
             [
                 new() { Path = @"{Documents}\ROBLOX\AutoSaves", Category = "autosave", Recursive = true, MaxAgeDays = 30, MaxFiles = 50 },
@@ -132,6 +132,168 @@ public static class BuiltInProfiles
             ArtifactRules =
             [
                 new() { Path = @"%APPDATA%\discord", Category = "logs", FilePattern = "*.log", Recursive = true, MaxAgeDays = 3, MaxFiles = 25 },
+            ],
+        },
+
+        new()
+        {
+            Id = "photoshop",
+            DisplayName = "Adobe Photoshop",
+            ProcessNames = ["Photoshop"],
+            ArtifactRules =
+            [
+                // AutoRecover holds full working copies of open documents
+                new() { Path = @"%APPDATA%\Adobe\Adobe Photoshop *\AutoRecover", Category = "autosave", Recursive = true, MaxAgeDays = 30, MaxFiles = 25 },
+            ],
+        },
+
+        new()
+        {
+            Id = "premiere-pro",
+            DisplayName = "Adobe Premiere Pro",
+            ProcessNames = ["Adobe Premiere Pro"],
+            ArtifactRules =
+            [
+                new() { Path = @"{Documents}\Adobe\Premiere Pro\*\Adobe Premiere Pro Auto-Save", Category = "autosave", FilePattern = "*.prproj", Recursive = true, MaxAgeDays = 30, MaxFiles = 25 },
+            ],
+        },
+
+        new()
+        {
+            Id = "fl-studio",
+            DisplayName = "FL Studio",
+            ProcessNames = ["FL64", "FL"],
+            ArtifactRules =
+            [
+                new() { Path = @"{Documents}\Image-Line\FL Studio\Projects\Backup", Category = "autosave", FilePattern = "*.flp", MaxAgeDays = 30, MaxFiles = 50 },
+            ],
+        },
+
+        new()
+        {
+            Id = "obs-studio",
+            DisplayName = "OBS Studio",
+            ProcessNames = ["obs64", "obs32"],
+            ArtifactRules =
+            [
+                new() { Path = @"%APPDATA%\obs-studio\basic\scenes", Category = "config", MaxAgeDays = 60, MaxFiles = 50 },
+                new() { Path = @"%APPDATA%\obs-studio\basic\profiles", Category = "config", Recursive = true, MaxAgeDays = 60, MaxFiles = 50 },
+                new() { Path = @"%APPDATA%\obs-studio\logs", Category = "logs", FilePattern = "*.txt", MaxAgeDays = 3, MaxFiles = 10 },
+                new() { Path = @"%APPDATA%\obs-studio\crashes", Category = "crash-dumps", MaxAgeDays = 30, MaxFiles = 5 },
+            ],
+        },
+
+        new()
+        {
+            Id = "unity",
+            DisplayName = "Unity Editor",
+            ProcessNames = ["Unity"],
+            ArtifactRules =
+            [
+                new() { Path = @"%LOCALAPPDATA%\Unity\Editor", Category = "logs", FilePattern = "Editor*.log", MaxAgeDays = 7, MaxFiles = 5 },
+            ],
+        },
+
+        new()
+        {
+            Id = "firefox",
+            DisplayName = "Mozilla Firefox",
+            ProcessNames = ["firefox"],
+            ArtifactRules =
+            [
+                // Session backups allow tab recovery after a hard kill
+                new() { Path = @"%APPDATA%\Mozilla\Firefox\Profiles\*\sessionstore-backups", Category = "session", MaxAgeDays = 14, MaxFiles = 10 },
+                new() { Path = @"%APPDATA%\Mozilla\Firefox\Crash Reports", Category = "crash-dumps", Recursive = true, MaxAgeDays = 14, MaxFiles = 10 },
+            ],
+        },
+
+        new()
+        {
+            Id = "msedge",
+            DisplayName = "Microsoft Edge",
+            ProcessNames = ["msedge"],
+            ArtifactRules =
+            [
+                new() { Path = @"%LOCALAPPDATA%\Microsoft\Edge\User Data\Default\Sessions", Category = "session", MaxAgeDays = 7, MaxFiles = 10 },
+                new() { Path = @"%LOCALAPPDATA%\Microsoft\Edge\User Data\Crashpad\reports", Category = "crash-dumps", MaxAgeDays = 7, MaxFiles = 5 },
+            ],
+        },
+
+        new()
+        {
+            Id = "windows-notepad",
+            DisplayName = "Windows Notepad",
+            ProcessNames = ["Notepad"],
+            ArtifactRules =
+            [
+                // Windows 11 Notepad keeps the FULL content of every unsaved tab here
+                new() { Path = @"%LOCALAPPDATA%\Packages\Microsoft.WindowsNotepad_8wekyb3d8bbwe\LocalState\TabState", Category = "autosave", MaxAgeDays = 0, MaxFiles = 100 },
+            ],
+        },
+
+        new()
+        {
+            Id = "audacity",
+            DisplayName = "Audacity",
+            ProcessNames = ["Audacity"],
+            ArtifactRules =
+            [
+                // Unsaved project state (.aup3unsaved) lives in SessionData
+                new() { Path = @"%APPDATA%\audacity\SessionData", Category = "autosave", Recursive = true, MaxAgeDays = 14, MaxFiles = 25 },
+            ],
+        },
+
+        new()
+        {
+            Id = "krita",
+            DisplayName = "Krita",
+            ProcessNames = ["krita"],
+            ArtifactRules =
+            [
+                // Autosaves of never-saved documents land (hidden) in the user profile root
+                new() { Path = @"%USERPROFILE%", Category = "autosave", FilePattern = "*.kra-autosave", MaxAgeDays = 14, MaxFiles = 10 },
+                new() { Path = @"%LOCALAPPDATA%", Category = "crash-dumps", FilePattern = "kritacrash*.log", MaxAgeDays = 30, MaxFiles = 3 },
+            ],
+        },
+
+        new()
+        {
+            Id = "jetbrains-ides",
+            DisplayName = "JetBrains IDEs",
+            ProcessNames =
+            [
+                "idea64", "rider64", "pycharm64", "webstorm64", "clion64",
+                "phpstorm64", "goland64", "rubymine64", "datagrip64",
+            ],
+            ArtifactRules =
+            [
+                // LocalHistory is a per-file change journal — recoverable edits
+                new() { Path = @"%LOCALAPPDATA%\JetBrains\*\LocalHistory", Category = "backup", Recursive = true, MaxAgeDays = 14, MaxFiles = 200 },
+                new() { Path = @"%LOCALAPPDATA%\JetBrains\*\log", Category = "logs", FilePattern = "*.log", MaxAgeDays = 3, MaxFiles = 20 },
+            ],
+        },
+
+        new()
+        {
+            Id = "sublime-text",
+            DisplayName = "Sublime Text",
+            ProcessNames = ["sublime_text"],
+            ArtifactRules =
+            [
+                // The session file carries the contents of unsaved buffers
+                new() { Path = @"%APPDATA%\Sublime Text*\Local", Category = "autosave", FilePattern = "*.sublime_session", MaxAgeDays = 0, MaxFiles = 5 },
+            ],
+        },
+
+        new()
+        {
+            Id = "paint-dot-net",
+            DisplayName = "Paint.NET",
+            ProcessNames = ["paintdotnet"],
+            ArtifactRules =
+            [
+                // Crash logs land on the desktop
+                new() { Path = @"%USERPROFILE%\Desktop", Category = "crash-dumps", FilePattern = "pdncrash*.log", MaxAgeDays = 30, MaxFiles = 3 },
             ],
         },
     ];
