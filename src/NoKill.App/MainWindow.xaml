@@ -16,6 +16,9 @@
         <!-- Header -->
         <DockPanel DockPanel.Dock="Top" Margin="2,2,2,10">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Content="{Binding UpdateButtonText}" Style="{StaticResource AccentButton}"
+                        Command="{Binding InstallUpdateCommand}" Margin="0,0,14,0"
+                        Visibility="{Binding UpdateAvailable, Converter={StaticResource BoolToVis}}"/>
                 <CheckBox Content="Auto-preserve on freeze (watchdog)"
                           IsChecked="{Binding WatchdogEnabled}"
                           Foreground="{StaticResource Brush.TextPrimary}"

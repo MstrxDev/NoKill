@@ -4,6 +4,8 @@
              ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
 
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
         <!-- ==== Palette: guardian green + calm grays, matching the tray icon ==== -->
         <SolidColorBrush x:Key="Brush.WindowBg" Color="#F4F5F7"/>
         <SolidColorBrush x:Key="Brush.Card" Color="#FFFFFF"/>

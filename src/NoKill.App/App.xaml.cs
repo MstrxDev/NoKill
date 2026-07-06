@@ -15,6 +15,18 @@ public partial class App : System.Windows.Application
 
     private TrayIconService? _tray;
 
+    /// <summary>The single clean-exit path: tray Exit and the updater both use it.</summary>
+    public static void RequestExit()
+    {
+        IsShuttingDown = true;
+        if (Current is App app)
+        {
+            app._tray?.Dispose();
+            app.MainWindow?.Close();
+            app.Shutdown();
+        }
+    }
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -37,13 +49,7 @@ public partial class App : System.Windows.Application
         MainWindow = window;
 
         _tray = new TrayIconService(window, window.ViewModel);
-        _tray.ExitRequested += () =>
-        {
-            IsShuttingDown = true;
-            _tray.Dispose();
-            window.Close();
-            Shutdown();
-        };
+        _tray.ExitRequested += RequestExit;
         window.HiddenToTray += () => _tray.NotifyHiddenToTray();
 
         if (e.Args.Contains("--minimized"))

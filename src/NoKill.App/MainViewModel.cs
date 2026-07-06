@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NoKill.Automation;
 using NoKill.Core.Models;
+using NoKill.Core.Updates;
 using NoKill.Diagnostics;
 using NoKill.Profiles;
 using NoKill.Vault;
@@ -66,6 +67,78 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>Watchdog announcements for the tray balloon (freeze preserved, recovery).</summary>
     public event Action<string>? WatchdogNotification;
 
+    // --- updates ---
+    private readonly UpdateChecker _updateChecker = new();
+    private DateTimeOffset _lastUpdateCheck = DateTimeOffset.MinValue;
+    private UpdateInfo? _availableUpdate;
+
+    [ObservableProperty]
+    private bool _updateAvailable;
+
+    [ObservableProperty]
+    private string _updateButtonText = string.Empty;
+
+    /// <summary>Update announcements for the tray balloon.</summary>
+    public event Action<string>? UpdateNotification;
+
+    internal static string CurrentVersion =>
+        typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+
+    [RelayCommand]
+    private Task CheckForUpdatesAsync() => CheckForUpdatesCoreAsync(quiet: false);
+
+    private async Task CheckForUpdatesCoreAsync(bool quiet)
+    {
+        var update = await _updateChecker.CheckAsync(CurrentVersion);
+        if (update is not null)
+        {
+            _availableUpdate = update;
+            UpdateButtonText = $"Update to {update.Version}";
+            UpdateAvailable = true;
+            UpdateNotification?.Invoke($"NoKill {update.Version} is available — open the dashboard to install.");
+            if (!quiet)
+            {
+                StatusText = $"NoKill {update.Version} is available.";
+            }
+        }
+        else if (!quiet)
+        {
+            StatusText = $"You're up to date (NoKill {CurrentVersion}).";
+        }
+    }
+
+    [RelayCommand]
+    private async Task InstallUpdateAsync()
+    {
+        if (_availableUpdate is null)
+        {
+            return;
+        }
+
+        StatusText = $"Downloading NoKill {_availableUpdate.Version}…";
+        string? msiPath = await _updateChecker.DownloadInstallerAsync(_availableUpdate);
+
+        if (msiPath is null)
+        {
+            // no MSI asset or download failed: hand off to the release page
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = _availableUpdate.ReleaseUrl,
+                UseShellExecute = true,
+            });
+            return;
+        }
+
+        // The MSI's MajorUpgrade replaces this install in place; exit so the
+        // installer doesn't have to fight our running process.
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = msiPath,
+            UseShellExecute = true,
+        });
+        App.RequestExit();
+    }
+
     [RelayCommand]
     private async Task RefreshAsync()
     {
@@ -101,6 +174,15 @@ public sealed partial class MainViewModel : ObservableObject
             if (WatchdogEnabled)
             {
                 await RunWatchdogTickAsync(snapshot);
+            }
+
+            // Daily, disableable update check rides the scan loop; quiet so it
+            // never interrupts, and CheckAsync itself is silent on any failure.
+            if (UpdateSettings.AutoCheckEnabled
+                && DateTimeOffset.Now - _lastUpdateCheck > TimeSpan.FromHours(24))
+            {
+                _lastUpdateCheck = DateTimeOffset.Now;
+                _ = CheckForUpdatesCoreAsync(quiet: true);
             }
         }
         finally

@@ -20,6 +20,7 @@ internal sealed class TrayIconService : IDisposable
     private readonly (Drawing.Icon Icon, nint Handle) _alert = AppIcons.Draw(alert: true);
     private readonly WinForms.ToolStripMenuItem _watchdogItem;
     private readonly WinForms.ToolStripMenuItem _startupItem;
+    private readonly WinForms.ToolStripMenuItem _autoUpdateItem;
     private bool _hideHintShown;
     private bool _disposed;
 
@@ -42,6 +43,13 @@ internal sealed class TrayIconService : IDisposable
             CheckOnClick = true,
         };
         _startupItem.CheckedChanged += StartupItemChanged;
+        var checkUpdatesItem = new WinForms.ToolStripMenuItem(
+            "Check for updates now", null, (_, _) => _viewModel.CheckForUpdatesCommand.Execute(null));
+        _autoUpdateItem = new WinForms.ToolStripMenuItem("Check for updates automatically")
+        {
+            CheckOnClick = true,
+        };
+        _autoUpdateItem.CheckedChanged += AutoUpdateItemChanged;
         var exitItem = new WinForms.ToolStripMenuItem("Exit NoKill", null, (_, _) => ExitRequested?.Invoke());
 
         menu.Items.AddRange(
@@ -50,6 +58,9 @@ internal sealed class TrayIconService : IDisposable
             new WinForms.ToolStripSeparator(),
             _watchdogItem,
             _startupItem,
+            new WinForms.ToolStripSeparator(),
+            checkUpdatesItem,
+            _autoUpdateItem,
             new WinForms.ToolStripSeparator(),
             exitItem,
         ]);
@@ -67,6 +78,8 @@ internal sealed class TrayIconService : IDisposable
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         _viewModel.WatchdogNotification += message =>
             _notifyIcon.ShowBalloonTip(4000, "NoKill", message, WinForms.ToolTipIcon.Info);
+        _viewModel.UpdateNotification += message =>
+            _notifyIcon.ShowBalloonTip(5000, "NoKill update", message, WinForms.ToolTipIcon.Info);
     }
 
     /// <summary>First-time hint so a hidden window doesn't look like an exit.</summary>
@@ -99,7 +112,14 @@ internal sealed class TrayIconService : IDisposable
         _startupItem.CheckedChanged -= StartupItemChanged;
         _startupItem.Checked = StartupManager.IsEnabled();
         _startupItem.CheckedChanged += StartupItemChanged;
+
+        _autoUpdateItem.CheckedChanged -= AutoUpdateItemChanged;
+        _autoUpdateItem.Checked = UpdateSettings.AutoCheckEnabled;
+        _autoUpdateItem.CheckedChanged += AutoUpdateItemChanged;
     }
+
+    private void AutoUpdateItemChanged(object? sender, EventArgs e) =>
+        UpdateSettings.AutoCheckEnabled = _autoUpdateItem.Checked;
 
     // named handlers so SyncMenuState can detach/reattach them
     private void WatchdogItemChanged(object? sender, EventArgs e) =>

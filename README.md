@@ -55,6 +55,14 @@ install folder on PATH so `NoKill.Cli --history` works from any terminal.
 Versioning comes from `Directory.Build.props`; the MSI carries proper upgrade
 logic, so newer versions install over older ones cleanly.
 
+**Updates**: NoKill checks GitHub Releases for a newer version once a day (and
+on demand from the tray menu). This is the product's *only* outbound network
+call — an anonymous GET of the public releases feed, carrying nothing but the
+request itself — and it can be turned off from the tray ("Check for updates
+automatically"). When an update exists, an "Update to x.y.z" button appears in
+the dashboard header and a tray balloon mentions it once; one click downloads
+the MSI and upgrades in place.
+
 **Signing**: executables and the MSI are Authenticode-signed and timestamped.
 By default a self-signed `CN=NoKill Dev Signing` certificate is created/reused —
 structurally valid signatures that prove the pipeline but are untrusted on
