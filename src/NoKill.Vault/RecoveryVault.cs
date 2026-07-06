@@ -5,6 +5,24 @@ using NoKill.Core.Models;
 namespace NoKill.Vault;
 
 /// <summary>
+/// Caps that keep the vault from growing unbounded (the watchdog auto-preserves
+/// evidence including minidumps). Each cap can be disabled with 0. Pruning is
+/// oldest-first and only ever touches the vault's own entry folders — never
+/// user files, and never the entry currently being written.
+/// </summary>
+public sealed record VaultRetentionOptions
+{
+    /// <summary>Total vault size cap. Default 2 GB; 0 disables.</summary>
+    public long MaxTotalBytes { get; init; } = 2L * 1024 * 1024 * 1024;
+
+    /// <summary>Maximum number of entries. Default 200; 0 disables.</summary>
+    public int MaxEntries { get; init; } = 200;
+
+    /// <summary>Entries older than this are pruned. Default 0 (disabled) — age alone never deletes evidence.</summary>
+    public int MaxAgeDays { get; init; }
+}
+
+/// <summary>
 /// Preserves rescue evidence into a per-incident folder BEFORE any
 /// intervention is attempted. Vault rules, enforced here and not by caller
 /// discipline: sources are only ever read, entries are never overwritten,
@@ -22,12 +40,14 @@ public sealed class RecoveryVault
     };
 
     private readonly string _rootDirectory;
+    private readonly VaultRetentionOptions _retention;
 
-    public RecoveryVault(string? rootDirectory = null)
+    public RecoveryVault(string? rootDirectory = null, VaultRetentionOptions? retention = null)
     {
         _rootDirectory = rootDirectory ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
             "NoKill", "Vault");
+        _retention = retention ?? new VaultRetentionOptions();
     }
 
     public string RootDirectory => _rootDirectory;
@@ -84,12 +104,115 @@ public sealed class RecoveryVault
             CopyArtifact(entryDir, artifact, saved, warnings);
         }
 
+        var pruned = EnforceRetention(entryDir, warnings);
+
         return new VaultEntryResult
         {
             EntryDirectory = entryDir,
             SavedFiles = saved,
             Warnings = warnings,
+            PrunedEntries = pruned,
         };
+    }
+
+    /// <summary>Current vault footprint: entry count and total bytes (excluding staging).</summary>
+    public (int EntryCount, long TotalBytes) GetStats()
+    {
+        try
+        {
+            var entries = EnumerateEntryDirectories().ToList();
+            return (entries.Count, entries.Sum(DirectorySize));
+        }
+        catch
+        {
+            return (0, 0);
+        }
+    }
+
+    private IEnumerable<string> EnumerateEntryDirectories()
+    {
+        if (!Directory.Exists(_rootDirectory))
+        {
+            return [];
+        }
+
+        // dot-dirs (.tmp staging) are not entries
+        return Directory.EnumerateDirectories(_rootDirectory)
+            .Where(d => !Path.GetFileName(d).StartsWith('.'));
+    }
+
+    private IReadOnlyList<string> EnforceRetention(string currentEntryDir, List<string> warnings)
+    {
+        var pruned = new List<string>();
+        try
+        {
+            string currentFull = Path.GetFullPath(currentEntryDir);
+
+            // Oldest first; the entry just written is never a pruning candidate.
+            var candidates = EnumerateEntryDirectories()
+                .Where(d => !string.Equals(Path.GetFullPath(d), currentFull, StringComparison.OrdinalIgnoreCase))
+                .Select(d => (Dir: d, Created: Directory.GetCreationTimeUtc(d), Size: DirectorySize(d)))
+                .OrderBy(e => e.Created)
+                .ToList();
+
+            long totalBytes = candidates.Sum(e => e.Size) + DirectorySize(currentEntryDir);
+            int entryCount = candidates.Count + 1;
+
+            foreach (var (dir, created, size) in candidates)
+            {
+                bool tooOld = _retention.MaxAgeDays > 0
+                    && DateTime.UtcNow - created > TimeSpan.FromDays(_retention.MaxAgeDays);
+                bool overCount = _retention.MaxEntries > 0 && entryCount > _retention.MaxEntries;
+                bool overSize = _retention.MaxTotalBytes > 0 && totalBytes > _retention.MaxTotalBytes;
+
+                if (!tooOld && !overCount && !overSize)
+                {
+                    break; // sorted oldest-first: nothing newer can violate either
+                }
+
+                try
+                {
+                    Directory.Delete(dir, recursive: true);
+                    pruned.Add(dir);
+                    totalBytes -= size;
+                    entryCount--;
+                }
+                catch (Exception ex)
+                {
+                    warnings.Add($"Retention: could not prune {Path.GetFileName(dir)}: {ex.Message}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Retention is housekeeping; it must never fail a preserve.
+            warnings.Add($"Retention enforcement failed: {ex.Message}");
+        }
+
+        return pruned;
+    }
+
+    private static long DirectorySize(string dir)
+    {
+        try
+        {
+            return Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories)
+                .Sum(f =>
+                {
+                    try
+                    {
+                        return new FileInfo(f).Length;
+                    }
+                    catch
+                    {
+                        return 0L;
+                    }
+                });
+        }
+        catch
+        {
+            return 0L;
+        }
     }
 
     private string CreateEntryDirectory(VaultEntryRequest request)

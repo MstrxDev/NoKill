@@ -433,6 +433,11 @@ static (int Code, long IncidentId) PreserveToVault(int pid, string dumpLevel, st
         Console.WriteLine($"  warning: {warning}");
     }
 
+    foreach (string prunedEntry in result.PrunedEntries)
+    {
+        Console.WriteLine($"  retention: pruned old entry {Path.GetFileName(prunedEntry)}");
+    }
+
     long incidentId = 0;
     try
     {

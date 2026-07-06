@@ -61,4 +61,7 @@ public sealed record VaultEntryResult
 
     /// <summary>Non-fatal problems (missing artifact, oversized file skipped). Empty means a clean preserve.</summary>
     public required IReadOnlyList<string> Warnings { get; init; }
+
+    /// <summary>Old entries removed by the retention policy to stay within the vault's caps.</summary>
+    public IReadOnlyList<string> PrunedEntries { get; init; } = [];
 }

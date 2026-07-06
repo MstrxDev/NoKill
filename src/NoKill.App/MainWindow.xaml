@@ -284,6 +284,9 @@
                     </Border>
 
                     <DockPanel Grid.Row="1" Margin="4,10,4,0">
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding VaultStatsText}"
+                                   FontSize="12" Foreground="{StaticResource Brush.TextSecondary}"
+                                   VerticalAlignment="Center" Margin="10,0,0,0"/>
                         <TextBlock DockPanel.Dock="Left" Text="Top offenders" FontWeight="SemiBold"
                                    FontSize="12" Foreground="{StaticResource Brush.TextSecondary}"
                                    VerticalAlignment="Center" Margin="0,0,10,0"/>

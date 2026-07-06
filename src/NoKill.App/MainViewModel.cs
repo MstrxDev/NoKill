@@ -55,6 +55,9 @@ public sealed partial class MainViewModel : ObservableObject
     private IReadOnlyList<FreezeOffender> _topOffenders = [];
 
     [ObservableProperty]
+    private string _vaultStatsText = string.Empty;
+
+    [ObservableProperty]
     private string _statusText = "Scanning…";
 
     [ObservableProperty]
@@ -305,11 +308,14 @@ public sealed partial class MainViewModel : ObservableObject
     {
         try
         {
-            var (records, offenders) = await Task.Run(() =>
-                (_history.GetRecent(100), _history.GetTopOffenders(5)));
+            var (records, offenders, stats) = await Task.Run(() =>
+                (_history.GetRecent(100), _history.GetTopOffenders(5), _vault.GetStats()));
 
             HistoryRecords = records;
             TopOffenders = offenders;
+            VaultStatsText = stats.EntryCount == 0
+                ? "Vault: empty"
+                : $"Vault: {stats.EntryCount} entries, {stats.TotalBytes / (1024.0 * 1024):F0} MB";
         }
         catch (Exception ex)
         {
