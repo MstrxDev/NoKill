@@ -18,6 +18,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = _viewModel;
+        Icon = AppIcons.CreateWindowIcon();
 
         _refreshTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _refreshTimer.Tick += (_, _) => _viewModel.RefreshCommand.Execute(null);

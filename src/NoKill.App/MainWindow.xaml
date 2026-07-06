@@ -2,170 +2,288 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:NoKill.App"
-        Title="NoKill — Rescue Dashboard" Height="640" Width="960"
+        Title="NoKill — Rescue Dashboard" Height="680" Width="1010"
+        MinHeight="480" MinWidth="760"
+        Background="{StaticResource Brush.WindowBg}"
+        FontFamily="Segoe UI" FontSize="13"
+        TextOptions.TextFormattingMode="Display" UseLayoutRounding="True"
         d:DataContext="{d:DesignInstance Type=local:MainViewModel}"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d">
-    <DockPanel Margin="8">
-        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
-            <Button DockPanel.Dock="Right" Content="Refresh" Padding="16,4"
-                    Command="{Binding RefreshCommand}"/>
-            <CheckBox DockPanel.Dock="Right" Content="Auto-preserve on freeze (watchdog)"
-                      IsChecked="{Binding WatchdogEnabled}" VerticalAlignment="Center"
-                      Margin="0,0,16,0"/>
-            <TextBlock Text="Read-only scan, refreshed every 3 s"
-                       VerticalAlignment="Center" FontWeight="Bold"/>
+    <DockPanel Margin="14,10,14,0">
+
+        <!-- Header -->
+        <DockPanel DockPanel.Dock="Top" Margin="2,2,2,10">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <CheckBox Content="Auto-preserve on freeze (watchdog)"
+                          IsChecked="{Binding WatchdogEnabled}"
+                          Foreground="{StaticResource Brush.TextPrimary}"
+                          VerticalAlignment="Center" Margin="0,0,14,0"/>
+                <Button Content="Refresh" Style="{StaticResource AccentButton}"
+                        Command="{Binding RefreshCommand}" Padding="18,5"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="NoKill" FontSize="20" FontWeight="Bold"
+                           Foreground="{StaticResource Brush.TextPrimary}"/>
+                <TextBlock Text="freeze rescue that never kills" FontSize="12.5"
+                           Foreground="{StaticResource Brush.TextSecondary}"
+                           VerticalAlignment="Bottom" Margin="8,0,0,3"/>
+            </StackPanel>
         </DockPanel>
 
-        <StatusBar DockPanel.Dock="Bottom">
-            <StatusBarItem Content="{Binding StatusText}"/>
-        </StatusBar>
+        <!-- Status footer -->
+        <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource Brush.Border}"
+                BorderThickness="0,1,0,0" Padding="4,7,4,9" Margin="0,10,0,0">
+            <TextBlock Text="{Binding StatusText}" Foreground="{StaticResource Brush.TextSecondary}"
+                       FontSize="12" TextTrimming="CharacterEllipsis"/>
+        </Border>
 
         <TabControl>
             <TabItem Header="Live monitor">
-        <Grid Margin="0,6,0,0">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="2*"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
+                <Grid Margin="0,8,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="2*"/>
+                        <RowDefinition Height="10"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
 
-            <DataGrid Grid.Row="0" ItemsSource="{Binding Windows}"
-                      AutoGenerateColumns="False" IsReadOnly="True"
-                      HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                      SelectionMode="Single">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="130"/>
-                    <DataGridTextColumn Header="Process" Binding="{Binding ProcessName}" Width="170"/>
-                    <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="70"/>
-                    <DataGridTextColumn Header="Window title" Binding="{Binding Title}" Width="*"/>
-                    <DataGridTemplateColumn Header="Actions" Width="170">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal">
-                                    <Button Content="Preserve" Padding="8,2" Margin="2"
-                                            Command="{Binding DataContext.PreserveCommand,
-                                                      RelativeSource={RelativeSource AncestorType=Window}}"
-                                            CommandParameter="{Binding}"/>
-                                    <Button Content="Diagnose" Padding="8,2" Margin="2"
-                                            Command="{Binding DataContext.DiagnoseCommand,
-                                                      RelativeSource={RelativeSource AncestorType=Window}}"
-                                            CommandParameter="{Binding}"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                </DataGrid.Columns>
-                <DataGrid.RowStyle>
-                    <Style TargetType="DataGridRow">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding Status}" Value="NotResponding">
-                                <Setter Property="Background" Value="#FFD6D6"/>
-                                <Setter Property="FontWeight" Value="Bold"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding Status}" Value="LikelyHung">
-                                <Setter Property="Background" Value="#FFEFD6"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding Status}" Value="Unknown">
-                                <Setter Property="Foreground" Value="Gray"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </DataGrid.RowStyle>
-            </DataGrid>
+                    <!-- Open windows card -->
+                    <Border Grid.Row="0" Style="{StaticResource Card}">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionCaption}"
+                                       Text="OPEN WINDOWS — READ-ONLY SCAN EVERY 3 S"/>
+                            <DataGrid ItemsSource="{Binding Windows}" AutoGenerateColumns="False" IsReadOnly="True">
+                                <DataGrid.Columns>
+                                    <DataGridTemplateColumn Header="Status" Width="135" SortMemberPath="Status">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Border>
+                                                    <Border.Style>
+                                                        <Style TargetType="Border" BasedOn="{StaticResource Pill}">
+                                                            <Setter Property="Background" Value="{StaticResource Brush.OkBg}"/>
+                                                            <Setter Property="TextElement.Foreground" Value="{StaticResource Brush.OkFg}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Status}" Value="NotResponding">
+                                                                    <Setter Property="Background" Value="{StaticResource Brush.DangerBg}"/>
+                                                                    <Setter Property="TextElement.Foreground" Value="{StaticResource Brush.DangerFg}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Status}" Value="LikelyHung">
+                                                                    <Setter Property="Background" Value="{StaticResource Brush.WarnBg}"/>
+                                                                    <Setter Property="TextElement.Foreground" Value="{StaticResource Brush.WarnFg}"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Status}" Value="Unknown">
+                                                                    <Setter Property="Background" Value="{StaticResource Brush.NeutralBg}"/>
+                                                                    <Setter Property="TextElement.Foreground" Value="{StaticResource Brush.NeutralFg}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock>
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock" BasedOn="{StaticResource PillText}">
+                                                                <Setter Property="Text" Value="Responsive"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Status}" Value="NotResponding">
+                                                                        <Setter Property="Text" Value="Not responding"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding Status}" Value="LikelyHung">
+                                                                        <Setter Property="Text" Value="Likely hung"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding Status}" Value="Unknown">
+                                                                        <Setter Property="Text" Value="Unknown"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Border>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTextColumn Header="Process" Binding="{Binding ProcessName}" Width="165"/>
+                                    <DataGridTextColumn Header="PID" Binding="{Binding ProcessId}" Width="70"/>
+                                    <DataGridTextColumn Header="Window title" Binding="{Binding Title}" Width="*"/>
+                                    <DataGridTemplateColumn Header="Actions" Width="175">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Button Content="Preserve" Style="{StaticResource SmallButton}"
+                                                            Command="{Binding DataContext.PreserveCommand,
+                                                                      RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}"/>
+                                                    <Button Content="Diagnose" Style="{StaticResource SmallButton}"
+                                                            Command="{Binding DataContext.DiagnoseCommand,
+                                                                      RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                                <DataGrid.RowStyle>
+                                    <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Status}" Value="NotResponding">
+                                                <Setter Property="Background" Value="#FFF5F5"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGrid.RowStyle>
+                            </DataGrid>
+                        </DockPanel>
+                    </Border>
 
-            <TextBlock Grid.Row="1" Text="Suspected modal blockers" FontWeight="Bold" Margin="0,10,0,4"/>
-
-            <DataGrid Grid.Row="2" ItemsSource="{Binding Blockers}"
-                      AutoGenerateColumns="False" IsReadOnly="True"
-                      HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                      SelectionMode="Single">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Blocked window" Binding="{Binding BlockedWindowTitle}" Width="220"/>
-                    <DataGridTextColumn Header="Process" Binding="{Binding ProcessName}" Width="120"/>
-                    <DataGridTextColumn Header="Blocking dialog" Binding="{Binding BlockerTitle}" Width="150"/>
-                    <DataGridCheckBoxColumn Header="Hidden?" Binding="{Binding IsHiddenBlocker, Mode=OneWay}" Width="70"/>
-                    <DataGridTextColumn Header="Dialog says" Binding="{Binding BlockerContent}" Width="*"/>
-                    <DataGridTemplateColumn Header="Action" Width="90">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <Button Content="Reveal" Padding="8,2" Margin="2"
-                                        Command="{Binding DataContext.RevealBlockerCommand,
-                                                  RelativeSource={RelativeSource AncestorType=Window}}"
-                                        CommandParameter="{Binding}"/>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                </DataGrid.Columns>
-                <DataGrid.RowStyle>
-                    <Style TargetType="DataGridRow">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsHiddenBlocker}" Value="True">
-                                <Setter Property="Background" Value="#FFF2C8"/>
-                                <Setter Property="FontWeight" Value="Bold"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </DataGrid.RowStyle>
-            </DataGrid>
-        </Grid>
+                    <!-- Blockers card -->
+                    <Border Grid.Row="2" Style="{StaticResource Card}">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionCaption}"
+                                       Text="SUSPECTED MODAL BLOCKERS"/>
+                            <Grid>
+                                <DataGrid ItemsSource="{Binding Blockers}" AutoGenerateColumns="False" IsReadOnly="True">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Blocked window" Binding="{Binding BlockedWindowTitle}" Width="220"/>
+                                        <DataGridTextColumn Header="Process" Binding="{Binding ProcessName}" Width="115"/>
+                                        <DataGridTextColumn Header="Blocking dialog" Binding="{Binding BlockerTitle}" Width="140"/>
+                                        <DataGridTemplateColumn Header="Visibility" Width="95">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Border>
+                                                        <Border.Style>
+                                                            <Style TargetType="Border" BasedOn="{StaticResource Pill}">
+                                                                <Setter Property="Background" Value="{StaticResource Brush.NeutralBg}"/>
+                                                                <Setter Property="TextElement.Foreground" Value="{StaticResource Brush.NeutralFg}"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsHiddenBlocker}" Value="True">
+                                                                        <Setter Property="Background" Value="{StaticResource Brush.WarnBg}"/>
+                                                                        <Setter Property="TextElement.Foreground" Value="{StaticResource Brush.WarnFg}"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                        <TextBlock>
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock" BasedOn="{StaticResource PillText}">
+                                                                    <Setter Property="Text" Value="visible"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsHiddenBlocker}" Value="True">
+                                                                            <Setter Property="Text" Value="hidden"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTextColumn Header="Dialog says" Binding="{Binding BlockerContent}" Width="*"/>
+                                        <DataGridTemplateColumn Header="Action" Width="90">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Content="Reveal" Style="{StaticResource SmallButton}"
+                                                            Command="{Binding DataContext.RevealBlockerCommand,
+                                                                      RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                                <TextBlock Text="No modal blockers detected — nothing is hiding behind your windows."
+                                           Style="{StaticResource EmptyState}">
+                                    <TextBlock.Visibility>
+                                        <Binding Path="Blockers.Count">
+                                            <Binding.Converter>
+                                                <local:ZeroToVisibleConverter/>
+                                            </Binding.Converter>
+                                        </Binding>
+                                    </TextBlock.Visibility>
+                                </TextBlock>
+                            </Grid>
+                        </DockPanel>
+                    </Border>
+                </Grid>
             </TabItem>
 
             <TabItem Header="Freeze history">
-                <Grid Margin="0,6,0,0">
+                <Grid Margin="0,8,0,0">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <DockPanel Grid.Row="0" Margin="0,0,0,6">
-                        <Button DockPanel.Dock="Right" Content="Refresh history" Padding="12,4"
-                                Command="{Binding RefreshHistoryCommand}"/>
-                        <TextBlock Text="Recorded freeze incidents (newest first)"
-                                   FontWeight="Bold" VerticalAlignment="Center"/>
-                    </DockPanel>
+                    <Border Grid.Row="0" Style="{StaticResource Card}">
+                        <DockPanel>
+                            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                <Button DockPanel.Dock="Right" Content="Refresh history"
+                                        Style="{StaticResource SmallButton}" Margin="0"
+                                        Command="{Binding RefreshHistoryCommand}"/>
+                                <TextBlock Style="{StaticResource SectionCaption}" Margin="2,4,0,0"
+                                           Text="RECORDED FREEZE INCIDENTS — NEWEST FIRST"/>
+                            </DockPanel>
+                            <Grid>
+                                <DataGrid ItemsSource="{Binding HistoryRecords}" AutoGenerateColumns="False" IsReadOnly="True">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="When"
+                                                            Binding="{Binding StartedAt, StringFormat='MM-dd HH:mm:ss'}"
+                                                            Width="115"/>
+                                        <DataGridTextColumn Header="Process" Binding="{Binding ProcessName}" Width="150"/>
+                                        <DataGridTemplateColumn Header="Trigger" Width="95">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Border>
+                                                        <Border.Style>
+                                                            <Style TargetType="Border" BasedOn="{StaticResource Pill}">
+                                                                <Setter Property="Background" Value="{StaticResource Brush.NeutralBg}"/>
+                                                                <Setter Property="TextElement.Foreground" Value="{StaticResource Brush.NeutralFg}"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Trigger}" Value="watchdog">
+                                                                        <Setter Property="Background" Value="{StaticResource Brush.InfoBg}"/>
+                                                                        <Setter Property="TextElement.Foreground" Value="{StaticResource Brush.InfoFg}"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                        <TextBlock Text="{Binding Trigger}" Style="{StaticResource PillText}"/>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTextColumn Header="Duration"
+                                                            Binding="{Binding Duration.TotalSeconds, StringFormat='{}{0:F0} s'}"
+                                                            Width="75"/>
+                                        <DataGridTextColumn Header="Insight" Binding="{Binding Insight}" Width="*"/>
+                                        <DataGridTemplateColumn Header="Evidence" Width="105">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Content="Open entry" Style="{StaticResource SmallButton}"
+                                                            Command="{Binding DataContext.OpenVaultEntryCommand,
+                                                                      RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                                <TextBlock Text="No freeze incidents recorded yet.&#10;When something freezes — or the watchdog catches one — it shows up here."
+                                           Style="{StaticResource EmptyState}">
+                                    <TextBlock.Visibility>
+                                        <Binding Path="HistoryRecords.Count">
+                                            <Binding.Converter>
+                                                <local:ZeroToVisibleConverter/>
+                                            </Binding.Converter>
+                                        </Binding>
+                                    </TextBlock.Visibility>
+                                </TextBlock>
+                            </Grid>
+                        </DockPanel>
+                    </Border>
 
-                    <DataGrid Grid.Row="1" ItemsSource="{Binding HistoryRecords}"
-                              AutoGenerateColumns="False" IsReadOnly="True"
-                              HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                              SelectionMode="Single">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="When"
-                                                Binding="{Binding StartedAt, StringFormat='MM-dd HH:mm:ss'}"
-                                                Width="120"/>
-                            <DataGridTextColumn Header="Process" Binding="{Binding ProcessName}" Width="150"/>
-                            <DataGridTextColumn Header="Trigger" Binding="{Binding Trigger}" Width="80"/>
-                            <DataGridTextColumn Header="Duration"
-                                                Binding="{Binding Duration.TotalSeconds, StringFormat='{}{0:F0} s'}"
-                                                Width="80"/>
-                            <DataGridTextColumn Header="Insight" Binding="{Binding Insight}" Width="*"/>
-                            <DataGridTemplateColumn Header="Evidence" Width="100">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <Button Content="Open entry" Padding="8,2" Margin="2"
-                                                Command="{Binding DataContext.OpenVaultEntryCommand,
-                                                          RelativeSource={RelativeSource AncestorType=Window}}"
-                                                CommandParameter="{Binding}"/>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                        </DataGrid.Columns>
-                        <DataGrid.RowStyle>
-                            <Style TargetType="DataGridRow">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Trigger}" Value="watchdog">
-                                        <Setter Property="Background" Value="#EAF2FF"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </DataGrid.RowStyle>
-                    </DataGrid>
-
-                    <DockPanel Grid.Row="2" Margin="0,8,0,0">
-                        <TextBlock DockPanel.Dock="Left" Text="Top offenders:  "
-                                   FontWeight="Bold" VerticalAlignment="Center"/>
+                    <DockPanel Grid.Row="1" Margin="4,10,4,0">
+                        <TextBlock DockPanel.Dock="Left" Text="Top offenders" FontWeight="SemiBold"
+                                   FontSize="12" Foreground="{StaticResource Brush.TextSecondary}"
+                                   VerticalAlignment="Center" Margin="0,0,10,0"/>
                         <ItemsControl ItemsSource="{Binding TopOffenders}" VerticalAlignment="Center">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -174,9 +292,10 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="#F0F0F0" CornerRadius="3" Padding="6,2" Margin="0,0,8,0">
-                                        <TextBlock>
-                                            <Run Text="{Binding ProcessName, Mode=OneWay}" FontWeight="Bold"/>
+                                    <Border Background="{StaticResource Brush.NeutralBg}" CornerRadius="9"
+                                            Padding="9,3" Margin="0,0,8,0">
+                                        <TextBlock FontSize="12" Foreground="{StaticResource Brush.NeutralFg}">
+                                            <Run Text="{Binding ProcessName, Mode=OneWay}" FontWeight="SemiBold"/>
                                             <Run Text="{Binding IncidentCount, Mode=OneWay, StringFormat='×{0}'}"/>
                                         </TextBlock>
                                     </Border>

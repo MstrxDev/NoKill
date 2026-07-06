@@ -13,14 +13,11 @@ namespace NoKill.App;
 /// </summary>
 internal sealed class TrayIconService : IDisposable
 {
-    [DllImport("user32.dll")]
-    private static extern bool DestroyIcon(nint hIcon);
-
     private readonly MainWindow _window;
     private readonly MainViewModel _viewModel;
     private readonly WinForms.NotifyIcon _notifyIcon;
-    private readonly (Drawing.Icon Icon, nint Handle) _calm = DrawIcon(alert: false);
-    private readonly (Drawing.Icon Icon, nint Handle) _alert = DrawIcon(alert: true);
+    private readonly (Drawing.Icon Icon, nint Handle) _calm = AppIcons.Draw(alert: false);
+    private readonly (Drawing.Icon Icon, nint Handle) _alert = AppIcons.Draw(alert: true);
     private readonly WinForms.ToolStripMenuItem _watchdogItem;
     private readonly WinForms.ToolStripMenuItem _startupItem;
     private bool _hideHintShown;
@@ -146,29 +143,6 @@ internal sealed class TrayIconService : IDisposable
             : "NoKill — watching for freezes";
     }
 
-    private static (Drawing.Icon, nint) DrawIcon(bool alert)
-    {
-        using var bitmap = new Drawing.Bitmap(32, 32);
-        using (var graphics = Drawing.Graphics.FromImage(bitmap))
-        {
-            graphics.SmoothingMode = Drawing.Drawing2D.SmoothingMode.AntiAlias;
-            using var fill = new Drawing.SolidBrush(
-                alert ? Drawing.Color.FromArgb(200, 40, 40) : Drawing.Color.FromArgb(40, 140, 80));
-            graphics.FillEllipse(fill, 1, 1, 30, 30);
-
-            using var font = new Drawing.Font("Segoe UI", 15, Drawing.FontStyle.Bold, Drawing.GraphicsUnit.Pixel);
-            var format = new Drawing.StringFormat
-            {
-                Alignment = Drawing.StringAlignment.Center,
-                LineAlignment = Drawing.StringAlignment.Center,
-            };
-            graphics.DrawString("N", font, Drawing.Brushes.White, new Drawing.RectangleF(0, 0, 32, 32), format);
-        }
-
-        nint handle = bitmap.GetHicon();
-        return (Drawing.Icon.FromHandle(handle), handle);
-    }
-
     public void Dispose()
     {
         if (_disposed)
@@ -179,7 +153,7 @@ internal sealed class TrayIconService : IDisposable
         _disposed = true;
         _notifyIcon.Visible = false;
         _notifyIcon.Dispose();
-        DestroyIcon(_calm.Handle);
-        DestroyIcon(_alert.Handle);
+        AppIcons.DestroyIcon(_calm.Handle);
+        AppIcons.DestroyIcon(_alert.Handle);
     }
 }
