@@ -1,0 +1,13 @@
+<Project>
+
+  <!-- Single source of truth for version + product metadata across all projects. -->
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+    <Product>NoKill</Product>
+    <Authors>Mstrx</Authors>
+    <Company>Mstrx</Company>
+    <Copyright>© 2026 Mstrx. Local-first; no telemetry.</Copyright>
+    <Description>Freeze rescue that never kills: detects hung Windows apps, finds blockers, preserves evidence.</Description>
+  </PropertyGroup>
+
+</Project>

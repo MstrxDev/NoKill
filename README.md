@@ -42,6 +42,27 @@ dotnet run --project src/NoKill.Cli        # console scan
 dotnet run --project src/NoKill.App        # dashboard
 ```
 
+## Packaging & signing
+
+```
+powershell -ExecutionPolicy Bypass -File scripts\package.ps1
+```
+
+Produces `artifacts\NoKill-<version>-win-x64.msi`: a signed, self-contained
+win-x64 installer (no .NET runtime required on the target machine). It installs
+the dashboard and CLI to Program Files, adds a Start-menu shortcut and puts the
+install folder on PATH so `NoKill.Cli --history` works from any terminal.
+Versioning comes from `Directory.Build.props`; the MSI carries proper upgrade
+logic, so newer versions install over older ones cleanly.
+
+**Signing**: executables and the MSI are Authenticode-signed and timestamped.
+By default a self-signed `CN=NoKill Dev Signing` certificate is created/reused —
+structurally valid signatures that prove the pipeline but are untrusted on
+other machines. For distribution, set `NOKILL_CERT_THUMBPRINT` to the
+thumbprint of a real code-signing certificate (Azure Trusted Signing or an
+OV/EV certificate) in the current-user store; no script changes needed.
+WiX v5 is pinned as a repo-local dotnet tool (v6+ requires a fee-based EULA).
+
 ## Roadmap
 
 1. ✅ Window inventory + conservative hang detection

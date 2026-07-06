@@ -39,7 +39,6 @@ public sealed class FreezeIncidentTracker
         public required string Name;
         public required DateTimeOffset HungSince;
         public bool IncidentAnnounced;
-        public DateTimeOffset? LastIncidentStarted;
     }
 
     private readonly FreezeTrackerOptions _options;

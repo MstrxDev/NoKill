@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  NoKill MSI. Build via scripts/package.ps1, which supplies:
+    -d Version=<x.y.z>   product version (from Directory.Build.props)
+    -d PublishDir=<path> self-contained publish output to harvest
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="NoKill"
+           Manufacturer="Mstrx"
+           Version="$(var.Version)"
+           UpgradeCode="7a3c9f52-1b7e-4e1d-9c2a-84b30f6d5e11"
+           Scope="perMachine"
+           Compressed="yes">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of NoKill is already installed."/>
+    <MediaTemplate EmbedCab="yes"/>
+
+    <!-- paths resolve from the repo root: scripts/package.ps1 runs wix there -->
+    <Icon Id="NoKillIcon" SourceFile="assets\nokill.ico"/>
+    <Property Id="ARPPRODUCTICON" Value="NoKillIcon"/>
+    <Property Id="ARPHELPLINK" Value="https://github.com/MstrxDev/NoKill"/>
+
+    <!-- Everything the publish step produced, installed to Program Files\NoKill -->
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="NoKill">
+        <Files Include="$(var.PublishDir)\**"/>
+
+        <!-- CLI on PATH so 'NoKill.Cli' works from any terminal -->
+        <Component Id="PathEntry" Guid="3f8e2a91-6c44-4b8a-b0d1-52e9c7a4f210">
+          <Environment Id="PathEnv" Name="PATH" Value="[INSTALLFOLDER]"
+                       Part="last" Action="set" System="yes"/>
+          <RegistryValue Root="HKLM" Key="Software\NoKill" Name="InstallDir"
+                         Type="string" Value="[INSTALLFOLDER]" KeyPath="yes"/>
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Component Id="StartMenuShortcut" Guid="9d17b6c3-2e58-49f1-a7c2-0b64d8e3a5c7">
+        <Shortcut Id="NoKillShortcut"
+                  Name="NoKill"
+                  Description="Freeze rescue that never kills"
+                  Target="[INSTALLFOLDER]NoKill.App.exe"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="NoKillIcon"/>
+        <RegistryValue Root="HKCU" Key="Software\NoKill" Name="StartMenuShortcut"
+                       Type="integer" Value="1" KeyPath="yes"/>
+      </Component>
+    </StandardDirectory>
+
+  </Package>
+</Wix>

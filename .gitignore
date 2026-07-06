@@ -9,6 +9,7 @@ artifacts/
 
 ## Logs and local output
 *.log
+artifacts/
 
 ## NoKill local data (vault contents never belong in the repo)
 Vault/
