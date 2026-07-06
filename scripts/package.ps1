@@ -108,6 +108,10 @@ Write-Host 'Building MSI...' -ForegroundColor Cyan
 $msi = Join-Path $artifacts "NoKill-$version-win-x64.msi"
 Push-Location $repo
 try {
+    # fresh clones / CI runners: materialize the repo-local wix tool first
+    dotnet tool restore | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'dotnet tool restore failed' }
+
     dotnet tool run wix build (Join-Path $repo 'installer\NoKill.wxs') `
         -d "Version=$version" -d "PublishDir=$publishDir" `
         -arch x64 -o $msi
