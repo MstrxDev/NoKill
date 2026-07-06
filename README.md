@@ -1,6 +1,8 @@
+<img src="assets/logo.svg" width="72" align="left" alt="NoKill life ring logo"/>
+
 # NoKill
 
-A Windows rescue tool for applications that freeze or go "Not Responding" — built on the principle that killing the process is the last resort, not the first.
+A Windows rescue tool for applications that freeze or go "Not Responding" — built on the principle that killing the process is the last resort, not the first. The life ring is the mission: **rescue without harm**.
 
 Task Manager is a hammer. NoKill detects hung apps, figures out *why* they're stuck (hidden dialogs, wait chains, blocked dependencies), preserves recovery artifacts, and only then talks about anything drastic.
 
