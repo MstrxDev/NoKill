@@ -30,4 +30,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$env:GITHUB_REF_NAME" (Get-Item artifacts\*.msi).FullName --generate-notes --verify-tag
+          gh release view "$env:GITHUB_REF_NAME" 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Release already exists (created manually with signed artifacts); skipping."
+          } else {
+            gh release create "$env:GITHUB_REF_NAME" (Get-Item artifacts\*.msi).FullName --generate-notes --verify-tag
+          }
